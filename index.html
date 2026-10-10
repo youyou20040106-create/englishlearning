@@ -38,7 +38,6 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; -webkit-tap-highlight-color: transparent; }
     body { background: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; transition: background 0.25s, color 0.25s; }
 
-    /* 頂部導航列 */
     header {
       background: var(--card-bg);
       border-bottom: 1px solid var(--border);
@@ -710,7 +709,7 @@
     match: () => { playTone(784, 'sine', 0.12); setTimeout(() => playTone(1046, 'sine', 0.18), 90); }
   };
 
-  const S2T_MAP = {'万':'萬','与':'與','丑':'醜','专':'專','业':'業','东':'東','丝':'絲','两':'兩','严':'嚴','个':'個','丰':'豐','临':'臨','为':'為','丽':'麗','举':'舉','么':'麼','乐':'樂','习':'習','乡':'鄉','书':'書','买':'買','乱':'亂','争':'爭','云':'雲','亚':'亞','产':'產','亲':'親','亿':'億','从':'從','仪':'儀','们':'們','价':'價','众':'眾','优':'優','会':'會','伟':'偉','传':'傳','伤':'傷','伦':'倫','体':'體','余':'餘','佣':'傭','侠':'俠','侧':'側','侨':'僑','俭':'儉','债':'債','倾':'傾','偿':'償','储':'儲','儿':'兒','兑':'兌','党':'黨','兰':'蘭','关':'關','兴':'興','养':'養','兽':'獸','内':'內','写':'寫','军':'軍','农':'農','冰':'冰','冲':'衝','决':'決','况':'況','冻':'凍','净':'淨','凉':'涼','减':'減','几':'幾','凤':'鳳','凭':'憑','凯':'凱','击':'擊','刘':'劉','则':'則','刚':'剛','创':'創','初':'初','删':'刪','利':'利','别':'別','制':'製','刷':'刷','刺':'刺','刻':'刻','剂':'劑','剑':'劍','剥':'剝','剧':'劇','劝':'勸','办':'辦','务':'務','功':'功','动':'動','励':'勵','劲':'勁','劳':'勞','势':'勢','勋':'勳','匀':'勻','包':'包','匆':'匆','医':'醫','华':'華','协':'協','单':'單','卖':'賣','变':'變','县':'縣','复':'復','发':'發','观':'觀','见':'見','视':'視','觉':'覺','规':'規','览':'覽','计':'計','订':'訂','认':'認','让':'讓','设':'設','记':'記','访':'訪','论':'論','词':'詞','诗':'詩','试':'試','译':'譯','读':'讀','语':'語','请':'請','诸':'諸','诺':'諾','谋':'謀','谓':'謂','证':'證','识':'識','谱':'譜','贝':'貝','负':'讀','贡':'貢','财':'財','责':'責','贤':'賢','败':'敗','账':'賬','货':'貨','质':'質','贪':'貪','购':'購','贮':'貯','贯':'貫','贵':'貴','贷':'貸','资':'資','贾':'賈','赋':'賦','赌':'讀','赎':'贖','赏':'賞','赐':'賜','赔':'賠','赖':'賴','赚':'賺','车':'車','轨':'軌','轩':'軒','转':'轉','轮':'輪','软':'軟','轰':'轟','轻':'輕','载':'載','较':'較','辅':'輔','辆':'輛','辈':'輩','辉':'輝','辐':'輻','辑':'輯','输':'輸','辖':'轄','辗':'輾','门':'門','闪':'閃','闭':'閉','开':'開','闰':'閏','闲':'閒','间':'間','闸':'閘','阁':'閣','闺':'閨','阅':'閱','阐':'闡','阔':'闊','队':'隊','阳':'陽','阴':'陰','阵':'陣','阶':'階','际':'際','陆':'陸','陈':'陳','险':'險','随':'隨','隐':'隱','难':'難','雾':'霧','霉':'黴','霸':'霸','靓':'靚','韦':'韋','韧':'韌','韩':'韓','韵':'韻','页':'頁','顶':'頂','顷':'頃','项':'項','顺':'順','须':'須','顽':'頑','顾':'顧','顿':'頓','颁':'頒','预':'預','领':'領','颇':'頗','颈':'頸','频':'頻','题':'題','额':'額','颜':'顏','风':'風','飘':'飄','飞':'飛','食':'食','饮':'飲','饭':'飯','饱':'飽','饲':'飼','馆':'館','馈':'饋','饿':'餓','馀':'餘','馄':'餛','鲜':'鮮','鸟':'鳥','鸡':'雞','鸣':'鳴','鸥':'鷗','鸦':'鴉','鸭':'鴨','鸿':'鴻','鸽':'鴿','鹅':'鵝','鹃':'鵑','鹄':'鵠','鹉':'鵡','鹊':'鵲','鹏':'鵬','鹰':'鷹','鹭':'鷺','麦':'麥','黄':'黃','齐':'齊','齿':'齒','龙':'龍'};
+  const S2T_MAP = {'万':'萬','与':'與','丑':'醜','专':'專','业':'業','东':'東','丝':'絲','两':'兩','严':'嚴','个':'個','丰':'豐','临':'臨','为':'為','丽':'麗','举':'舉','么':'麼','乐':'樂','习':'習','乡':'鄉','书':'書','买':'買','乱':'亂','争':'爭','云':'雲','亚':'亞','产':'產','亲':'親','亿':'億','从':'從','仪':'儀','们':'們','价':'價','众':'眾','优':'優','会':'會','伟':'偉','传':'傳','伤':'傷','伦':'倫','体':'體','余':'餘','佣':'傭','侠':'俠','侧':'側','侨':'僑','俭':'儉','债':'債','倾':'傾','偿':'償','储':'儲','儿':'兒','兑':'兌','党':'黨','兰':'蘭','关':'關','兴':'興','养':'養','兽':'獸','内':'內','写':'寫','军':'軍','农':'農','冰':'冰','冲':'衝','决':'決','况':'況','冻':'凍','净':'淨','凉':'涼','减':'減','几':'幾','凤':'鳳','凭':'憑','凯':'凱','击':'擊','刘':'劉','则':'則','刚':'剛','创':'創','初':'初','删':'刪','利':'利','别':'別','制':'製','刷':'刷','刺':'刺','刻':'刻','剂':'劑','剑':'劍','剥':'剝','剧':'劇','劝':'勸','办':'辦','务':'務','功':'功','动':'動','励':'勵','劲':'勁','劳':'勞','势':'勢','勋':'勳','匀':'勻','包':'包','匆':'匆','医':'醫','华':'華','协':'協','单':'單','卖':'賣','变':'變','县':'縣','复':'復','发':'發','观':'觀','见':'見','视':'視','觉':'覺','规':'規','览':'覽','计':'計','订':'訂','认':'認','让':'讓','设':'設','记':'記','访':'訪','论':'論','词':'詞','诗':'詩','试':'試','译':'譯','读':'讀','语':'語','请':'請','诸':'諸','诺':'諾','谋':'謀','谓':'謂','证':'證','识':'識','谱':'譜','贝':'貝','负':'負','贡':'貢','财':'財','责':'責','贤':'賢','败':'敗','账':'賬','货':'貨','质':'質','贪':'貪','购':'購','贮':'貯','贯':'貫','贵':'貴','贷':'貸','资':'資','贾':'賈','赋':'賦','赌':'賭','赎':'贖','赏':'賞','赐':'賜','赔':'賠','赖':'賴','赚':'賺','车':'車','轨':'軌','轩':'軒','转':'轉','轮':'輪','软':'軟','轰':'轟','轻':'輕','载':'載','较':'較','辅':'輔','辆':'輛','辈':'輩','辉':'輝','辐':'輻','辑':'輯','输':'輸','辖':'轄','辗':'輾','门':'門','闪':'閃','闭':'閉','开':'開','闰':'閏','闲':'閒','间':'間','闸':'閘','阁':'閣','闺':'閨','阅':'閱','阐':'闡','阔':'闊','队':'隊','阳':'陽','阴':'陰','阵':'陣','阶':'階','际':'際','陆':'陸','陈':'陳','险':'險','随':'隨','隐':'隱','难':'難','雾':'霧','霉':'黴','霸':'霸','靓':'靚','韦':'韋','韧':'韌','韩':'韓','韵':'韻','页':'頁','顶':'頂','顷':'頃','项':'項','顺':'順','须':'須','顽':'頑','顾':'顧','顿':'頓','颁':'頒','预':'預','领':'領','颇':'頗','颈':'頸','频':'頻','题':'題','额':'額','颜':'顏','风':'風','飘':'飄','飞':'飛','食':'食','饮':'飲','饭':'飯','饱':'飽','饲':'飼','馆':'館','馈':'饋','饿':'餓','馀':'餘','馄':'餛','鲜':'鮮','鸟':'鳥','鸡':'雞','鸣':'鳴','鸥':'鷗','鸦':'鴉','鸭':'鴨','鸿':'鴻','鸽':'鴿','鹅':'鵝','鹃':'鵑','鹄':'鵠','鹉':'鵡','鹊':'鵲','鹏':'鵬','鹰':'鷹','鹭':'鷺','麦':'麥','黄':'黃','齐':'齊','齿':'齒','龙':'龍'};
 
   function toTraditionalChinese(str) {
     if (!str) return '';
@@ -782,9 +781,8 @@
       const record = data.record;
 
       if (record && record.wordsText) {
-        const cloudList = parseTextToList(record.wordsText);
-        const mergedList = [...new Set([...vocabList, ...cloudList])];
-        vocabList = mergedList;
+        const cloudParsed = parseLinesWithCustomMeaning(record.wordsText);
+        const cloudWords = cloudParsed.map(item => item.word);
 
         if (record.wordsStats) {
           for (let w in record.wordsStats) {
@@ -798,7 +796,16 @@
           }
         }
 
-        const newText = vocabList.join('\n');
+        cloudParsed.forEach(item => {
+          if (item.customMeaning && vocabStats[item.word] && !vocabStats[item.word].meaning) {
+            vocabStats[item.word].meaning = item.customMeaning;
+          }
+        });
+
+        const mergedList = [...new Set([...vocabList, ...cloudWords])];
+        vocabList = mergedList;
+
+        const newText = serializeVocabListToText();
         document.getElementById('raw-vocab-input').value = newText;
         localStorage.setItem(STORAGE_KEY_TEXT, newText);
         localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
@@ -818,7 +825,7 @@
     }
 
     const payload = {
-      wordsText: document.getElementById('raw-vocab-input').value,
+      wordsText: serializeVocabListToText(),
       wordsStats: vocabStats,
       updatedAt: new Date().toISOString()
     };
@@ -842,10 +849,16 @@
 
   function scheduleCloudPush() {
     clearTimeout(cloudSyncTimeout);
-    cloudSyncTimeout = setTimeout(() => { pushToCloud(false); }, 2000);
+    cloudSyncTimeout = setTimeout(() => { pushToCloud(false); }, 1500);
   }
 
-  // --- 智慧文字行解析器（同時支援純英文單字、CSV逗點、Tab、等號、冒號）---
+  function serializeVocabListToText() {
+    return vocabList.map(w => {
+      const meaning = vocabStats[w] ? vocabStats[w].meaning : '';
+      return meaning ? `${w}, ${meaning}` : w;
+    }).join('\n');
+  }
+
   function parseLinesWithCustomMeaning(text) {
     const lines = text.split('\n');
     const result = [];
@@ -856,7 +869,6 @@
       let word = '';
       let customMeaning = '';
 
-      // 依序檢查常見分隔符號：Tab (\t)、逗號 (,)、等號 (=)、冒號 (:)
       if (trimmed.includes('\t')) {
         const parts = trimmed.split('\t');
         word = parts[0].trim();
@@ -1142,7 +1154,7 @@
         if (!exist.includes(finalMeaning)) {
           vocabStats[currentSearchedWord].meaning = `${exist}；${finalMeaning}`;
           vocabList = [currentSearchedWord, ...vocabList.filter(w => w !== currentSearchedWord)];
-          const newText = vocabList.join('\n');
+          const newText = serializeVocabListToText();
           document.getElementById('raw-vocab-input').value = newText;
           localStorage.setItem(STORAGE_KEY_TEXT, newText);
           localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
@@ -1162,7 +1174,7 @@
     vocabList.unshift(currentSearchedWord);
     vocabStats[currentSearchedWord] = { meaning: finalMeaning, correct: 0, total: 0 };
 
-    const newText = vocabList.join('\n');
+    const newText = serializeVocabListToText();
     document.getElementById('raw-vocab-input').value = newText;
     localStorage.setItem(STORAGE_KEY_TEXT, newText);
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
@@ -1183,7 +1195,11 @@
       if (!vocabStats[w] || !vocabStats[w].meaning || vocabStats[w].meaning === '...') {
         statusBox.textContent = `Google 翻譯自動解析中 (${i + 1}/${vocabList.length}): ${w}...`;
         const { primary } = await fetchDetailedGoogleTranslation(w, 'en', 'zh-TW');
-        vocabStats[w] = { meaning: primary || '（暫無釋義）', correct: (vocabStats[w] ? vocabStats[w].correct : 0), total: (vocabStats[w] ? vocabStats[w].total : 0) };
+        vocabStats[w] = { 
+          meaning: primary || '（暫無釋義）', 
+          correct: (vocabStats[w] ? vocabStats[w].correct : 0), 
+          total: (vocabStats[w] ? vocabStats[w].total : 0) 
+        };
         hasUpdate = true;
       }
     }
@@ -1191,7 +1207,11 @@
     statusBox.textContent = hasUpdate ? '✓ 翻譯索引已自動補齊完畢！' : '';
     setTimeout(() => { if (statusBox.textContent.includes('✓')) statusBox.textContent = ''; }, 2000);
 
+    const newText = serializeVocabListToText();
+    document.getElementById('raw-vocab-input').value = newText;
+    localStorage.setItem(STORAGE_KEY_TEXT, newText);
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
+
     renderStatsTable();
     initFlashcards(false);
     refreshWriteModeData();
@@ -1199,7 +1219,6 @@
     if (hasUpdate) scheduleCloudPush();
   }
 
-  // --- 核心同步：支援「英文+中文」匯入且新單字置頂 ---
   async function syncVocabDatabase(importedRawText = null) {
     const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
     const parsedItems = parseLinesWithCustomMeaning(rawText);
@@ -1208,7 +1227,6 @@
     const oldWords = [];
 
     parsedItems.forEach(item => {
-      // 優先寫入自訂中文釋義（不被 Google 翻譯覆蓋）
       if (item.customMeaning) {
         if (!vocabStats[item.word]) {
           vocabStats[item.word] = { meaning: item.customMeaning, correct: 0, total: 0 };
@@ -1225,17 +1243,16 @@
     });
 
     const otherExisting = vocabList.filter(w => !brandNewWords.includes(w) && !oldWords.includes(w));
-
-    // 新加入單字置頂
     vocabList = [...brandNewWords, ...oldWords, ...otherExisting];
 
-    const newText = vocabList.join('\n');
+    const newText = serializeVocabListToText();
     document.getElementById('raw-vocab-input').value = newText;
     localStorage.setItem(STORAGE_KEY_TEXT, newText);
 
     await autoFillMissingTranslations();
   }
 
+  // --- 學習統計修復：徹底修復中文修改後回彈的問題 ---
   function saveEditedMeaning(word) {
     const inputElem = document.getElementById(`edit-meaning-${word}`);
     if (!inputElem) return;
@@ -1250,13 +1267,47 @@
     } else {
       vocabStats[word].meaning = newMeaning;
     }
-
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
+
+    // 同步更新自訂單字庫字串，避免被舊字串或雲端回滾覆蓋
+    const rawInput = document.getElementById('raw-vocab-input');
+    const lines = rawInput.value.split('\n');
+    let replaced = false;
+
+    const updatedLines = lines.map(line => {
+      let trimmed = line.trim();
+      if (!trimmed) return line;
+
+      let sep = '';
+      if (trimmed.includes('\t')) sep = '\t';
+      else if (trimmed.includes(',')) sep = ',';
+      else if (trimmed.includes('=')) sep = '=';
+      else if (trimmed.includes(':')) sep = ':';
+      else if (trimmed.includes('：')) sep = '：';
+
+      let lineWord = sep ? trimmed.split(sep)[0].trim().toLowerCase() : trimmed.toLowerCase();
+
+      if (lineWord === word.toLowerCase()) {
+        replaced = true;
+        return `${word}, ${newMeaning}`;
+      }
+      return line;
+    });
+
+    if (!replaced) {
+      updatedLines.unshift(`${word}, ${newMeaning}`);
+    }
+
+    const newRawText = updatedLines.join('\n');
+    rawInput.value = newRawText;
+    localStorage.setItem(STORAGE_KEY_TEXT, newRawText);
+
     showToast(`✓ 「${word}」繁體釋義已更新！`, 'success');
     renderStatsTable();
     updateCardDisplay();
     refreshWriteModeData();
-    scheduleCloudPush();
+
+    pushToCloud(false);
   }
 
   function deleteSingleWord(word) {
@@ -1264,7 +1315,7 @@
     vocabList = vocabList.filter(w => w !== word);
     delete vocabStats[word];
 
-    const newText = vocabList.join('\n');
+    const newText = serializeVocabListToText();
     document.getElementById('raw-vocab-input').value = newText;
     localStorage.setItem(STORAGE_KEY_TEXT, newText);
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
@@ -1300,7 +1351,6 @@
     return [...weakList, ...strongList];
   }
 
-  // --- 1. Flashcards ---
   function initFlashcards(shouldShuffle = true) {
     if (vocabList.length === 0) {
       flashcardQueue = [];
@@ -1459,7 +1509,6 @@
     });
   }
 
-  // --- 2. Learn ---
   function startLearnMode() {
     if (vocabList.length < 4) {
       showToast('學習模式至少需要 4 個單字！', 'warning');
@@ -1551,7 +1600,6 @@
     }
   }
 
-  // --- 3. Write ---
   function startWriteMode() {
     if (vocabList.length === 0) {
       showToast('請先在題庫管理新增單字！', 'warning');
@@ -1679,7 +1727,6 @@
     }
   }
 
-  // --- 4. Match ---
   function startMatchGame() {
     clearInterval(matchTimer);
     document.getElementById('match-best').textContent = localStorage.getItem(STORAGE_KEY_MATCH_BEST) ? `${localStorage.getItem(STORAGE_KEY_MATCH_BEST)}s` : '無';
@@ -1757,7 +1804,6 @@
     }
   }
 
-  // --- 統計數據與進度 ---
   function recordStat(word, isCorrect) {
     if (vocabStats[word]) {
       vocabStats[word].total += 1;
@@ -1809,8 +1855,9 @@
       const rateB = vocabStats[b].total === 0 ? 0 : vocabStats[b].correct / vocabStats[b].total;
       return rateA - rateB;
     });
-    document.getElementById('raw-vocab-input').value = vocabList.join('\n');
-    localStorage.setItem(STORAGE_KEY_TEXT, vocabList.join('\n'));
+    const newText = serializeVocabListToText();
+    document.getElementById('raw-vocab-input').value = newText;
+    localStorage.setItem(STORAGE_KEY_TEXT, newText);
     showToast('✓ 英文單字已依熟練度由弱到強重新排序！', 'info');
     initFlashcards(false);
     renderStatsTable();
@@ -1873,12 +1920,7 @@
   }
 
   function exportVocab() {
-    // 匯出時一併導出單字與中文釋義（方便日後無損還原）
-    const lines = vocabList.map(w => {
-      const m = vocabStats[w] ? vocabStats[w].meaning : '';
-      return m ? `${w}, ${m}` : w;
-    });
-    const text = lines.join('\n');
+    const text = serializeVocabListToText();
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
