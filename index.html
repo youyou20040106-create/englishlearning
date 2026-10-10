@@ -51,9 +51,13 @@
     }
     .logo-area { display: flex; align-items: center; gap: 0.5rem; }
     .logo { font-size: 1.25rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; white-space: nowrap; }
-    .sync-indicator { font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 12px; background: #e8eaed; color: var(--text-sub); }
+    .sync-indicator { font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 12px; background: #e8eaed; color: var(--text-sub); transition: all 0.2s; }
     .sync-indicator.synced { background: #ceead6; color: #0d652d; font-weight: 600; }
+    .sync-indicator.syncing { background: #feefc3; color: #b06000; font-weight: 600; }
+    .sync-indicator.failed { background: #fce8e6; color: var(--danger); font-weight: 600; }
     body.dark-mode .sync-indicator.synced { background: #133924; color: #81c995; }
+    body.dark-mode .sync-indicator.syncing { background: #4a3600; color: #fdd663; }
+    body.dark-mode .sync-indicator.failed { background: #372223; color: #f28b82; }
     
     .nav-modes { 
       display: flex; 
@@ -602,7 +606,7 @@
     <div class="cloud-card">
       <div>
         <h4 style="color: var(--primary); font-size: 1rem;">☁️ 手機／電腦跨裝置同步</h4>
-        <span style="font-size: 0.85rem; color: var(--text-sub);">支援中英文對照批次匯入，防覆蓋聯集合併機制運作中</span>
+        <span style="font-size: 0.85rem; color: var(--text-sub);">新增、修改或匯入單字將自動推送到雲端備份</span>
       </div>
       <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <button class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="pullFromCloud(true)">⬇️ 從雲端抓取並合併</button>
@@ -724,6 +728,21 @@
     toastTimer = setTimeout(() => { toast.className = ''; }, 1800);
   }
 
+  function updateSyncBadge(status) {
+    const badge = document.getElementById('sync-badge');
+    if (!badge) return;
+    if (status === 'syncing') {
+      badge.textContent = '☁️ 雲端同步中...';
+      badge.className = 'sync-indicator syncing';
+    } else if (status === 'synced') {
+      badge.textContent = '☁️ 雲端已連線';
+      badge.className = 'sync-indicator synced';
+    } else if (status === 'failed') {
+      badge.textContent = '⚠️ 同步失敗';
+      badge.className = 'sync-indicator failed';
+    }
+  }
+
   function initPreferences() {
     const savedTheme = localStorage.getItem(STORAGE_KEY_THEME);
     if (savedTheme === 'dark') {
@@ -773,6 +792,8 @@
   async function pullFromCloud(showFeedback = true) {
     try {
       if (showFeedback) showToast('正在連接雲端並安全合併...', 'info');
+      updateSyncBadge('syncing');
+
       const res = await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}/latest`, {
         headers: { 'X-Master-Key': CLOUD_MASTER_KEY }
       });
@@ -811,9 +832,13 @@
         localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
 
         await autoFillMissingTranslations();
+        updateSyncBadge('synced');
         if (showFeedback) showToast('✓ 雲端資料已安全合併完畢！', 'success');
+      } else {
+        updateSyncBadge('synced');
       }
     } catch {
+      updateSyncBadge('failed');
       if (showFeedback) showToast('無法連接雲端，維持目前本機題庫', 'warning');
     }
   }
@@ -823,6 +848,8 @@
       if (showFeedback) showToast('本機題庫為空，拒絕推送以防清空雲端！', 'warning');
       return;
     }
+
+    updateSyncBadge('syncing');
 
     const payload = {
       wordsText: serializeVocabListToText(),
@@ -839,17 +866,24 @@
         },
         body: JSON.stringify(payload)
       });
-      if (res.ok && showFeedback) {
-        showToast('✓ 雲端備份已更新成功！', 'success');
+      if (res.ok) {
+        updateSyncBadge('synced');
+        if (showFeedback) showToast('✓ 雲端備份已更新成功！', 'success');
+      } else {
+        throw new Error();
       }
     } catch {
+      updateSyncBadge('failed');
       if (showFeedback) showToast('推送到雲端失敗', 'warning');
     }
   }
 
   function scheduleCloudPush() {
     clearTimeout(cloudSyncTimeout);
-    cloudSyncTimeout = setTimeout(() => { pushToCloud(false); }, 1500);
+    updateSyncBadge('syncing');
+    cloudSyncTimeout = setTimeout(async () => {
+      await pushToCloud(false);
+    }, 1200);
   }
 
   function serializeVocabListToText() {
@@ -1143,7 +1177,8 @@
     });
   }
 
-  function addSearchedWordToVocab() {
+  // --- 新增單字：置頂並即時推送到雲端 ---
+  async function addSearchedWordToVocab() {
     if (!currentSearchedWord || selectedMeanings.length === 0) return;
 
     const finalMeaning = selectedMeanings.join('；');
@@ -1162,8 +1197,8 @@
           renderStatsTable();
           initFlashcards(false);
           refreshWriteModeData();
-          showToast(`✓ 已為「${currentSearchedWord}」擴充新釋義並置頂！`, 'success');
-          scheduleCloudPush();
+          showToast(`✓ 已為「${currentSearchedWord}」擴充新釋義並同步至雲端！`, 'success');
+          await pushToCloud(false);
           return;
         }
       }
@@ -1182,8 +1217,8 @@
     renderStatsTable();
     initFlashcards(true);
     refreshWriteModeData();
-    showToast(`✓ 已加入單字庫並置頂：${currentSearchedWord}`, 'success');
-    scheduleCloudPush();
+    showToast(`✓ 已加入「${currentSearchedWord}」並自動同步到雲端！`, 'success');
+    await pushToCloud(false);
   }
 
   async function autoFillMissingTranslations() {
@@ -1216,9 +1251,10 @@
     initFlashcards(false);
     refreshWriteModeData();
 
-    if (hasUpdate) scheduleCloudPush();
+    if (hasUpdate) await pushToCloud(false);
   }
 
+  // --- 題庫管理：同步完成後自動推送到雲端 ---
   async function syncVocabDatabase(importedRawText = null) {
     const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
     const parsedItems = parseLinesWithCustomMeaning(rawText);
@@ -1250,9 +1286,10 @@
     localStorage.setItem(STORAGE_KEY_TEXT, newText);
 
     await autoFillMissingTranslations();
+    await pushToCloud(false);
+    showToast('✓ 單字庫與雲端備份已同步完成！', 'success');
   }
 
-  // --- 學習統計修復：徹底修復中文修改後回彈的問題 ---
   function saveEditedMeaning(word) {
     const inputElem = document.getElementById(`edit-meaning-${word}`);
     if (!inputElem) return;
@@ -1269,7 +1306,6 @@
     }
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
 
-    // 同步更新自訂單字庫字串，避免被舊字串或雲端回滾覆蓋
     const rawInput = document.getElementById('raw-vocab-input');
     const lines = rawInput.value.split('\n');
     let replaced = false;
@@ -1302,7 +1338,7 @@
     rawInput.value = newRawText;
     localStorage.setItem(STORAGE_KEY_TEXT, newRawText);
 
-    showToast(`✓ 「${word}」繁體釋義已更新！`, 'success');
+    showToast(`✓ 「${word}」繁體釋義已更新並上傳雲端！`, 'success');
     renderStatsTable();
     updateCardDisplay();
     refreshWriteModeData();
@@ -1323,8 +1359,8 @@
     renderStatsTable();
     initFlashcards(true);
     refreshWriteModeData();
-    showToast(`✓ 已刪除單字「${word}」`, 'info');
-    scheduleCloudPush();
+    showToast(`✓ 已刪除單字「${word}」並同步雲端`, 'info');
+    pushToCloud(false);
   }
 
   function getWordAccuracy(w) {
@@ -1913,7 +1949,7 @@
     reader.onload = async function(evt) {
       showToast('正在解析匯入單字與中文字詞...', 'info');
       await syncVocabDatabase(evt.target.result);
-      showToast('✓ 檔案匯入完成！新單字與自訂釋義已置頂！', 'success');
+      showToast('✓ 檔案匯入完成！新單字與自訂釋義已置頂並同步雲端！', 'success');
     };
     reader.readAsText(file);
     e.target.value = '';
