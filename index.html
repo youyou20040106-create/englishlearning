@@ -21,7 +21,6 @@
       --chip-bg: #e8f0fe;
     }
 
-    /* 深色模式變數 */
     body.dark-mode {
       --primary: #8ab4f8;
       --primary-hover: #aecbfa;
@@ -283,7 +282,6 @@
     }
     textarea.sync-area:focus { border-color: var(--primary); }
 
-    /* 1. 單字卡 (Tinder 滑動手勢容器) */
     .flashcard-stage {
       position: relative;
       width: 100%;
@@ -306,7 +304,6 @@
     }
     .flashcard-inner.flipped { transform: rotateY(180deg); }
     
-    /* 拖曳專用手勢動畫類別 */
     .flashcard-inner.swiping { transition: none !important; }
     .flashcard-inner.swipe-out-right { transform: translateX(120vw) rotate(30deg) !important; opacity: 0; transition: all 0.35s ease-out !important; }
     .flashcard-inner.swipe-out-left { transform: translateX(-120vw) rotate(-30deg) !important; opacity: 0; transition: all 0.35s ease-out !important; }
@@ -348,7 +345,6 @@
     }
     .card-speech-btn:hover { background: var(--chip-bg); transform: scale(1.08); }
 
-    /* 滑動視覺提示戳章 */
     .swipe-stamp {
       position: absolute;
       top: 1.5rem;
@@ -381,7 +377,6 @@
     .fc-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
     .round-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-main); cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
 
-    /* 2. 學習模式 (Learn - 四選一) */
     .learn-panel { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border); }
     .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-top: 1.2rem; }
     .opt-btn {
@@ -403,14 +398,12 @@
     .opt-btn.correct { background: #dcfce7 !important; border-color: var(--success) !important; color: #15803d !important; }
     .opt-btn.wrong { background: #fee2e2 !important; border-color: var(--danger) !important; color: #b91c1c !important; }
 
-    /* 3. 拼寫模式 (Diff Highlight) */
     .write-panel { background: var(--card-bg); border-radius: 12px; padding: 1.8rem 1rem; border: 1px solid var(--border); text-align: center; }
     .write-input { width: 85%; padding: 0.75rem 1rem; font-size: 1.1rem; border: 2px solid var(--border); border-radius: 8px; margin: 1.2rem 0; text-align: center; outline: none; background: transparent; color: var(--text-main); }
     .diff-container { font-size: 1.15rem; margin-top: 0.5rem; font-weight: 600; }
     .diff-wrong { color: var(--danger); text-decoration: underline wavy; font-weight: bold; }
     .diff-correct { color: var(--success); }
 
-    /* 4. 配對遊戲 */
     .match-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-top: 1rem; }
     .match-tile {
       background: var(--card-bg);
@@ -431,7 +424,6 @@
     .match-tile.selected { border-color: var(--primary); background: var(--chip-bg); transform: scale(1.02); }
     .match-tile.matched { opacity: 0; pointer-events: none; transform: scale(0.8); }
 
-    /* 統計表格 */
     .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 1rem; }
     .stat-table { width: 100%; border-collapse: collapse; min-width: 600px; }
     .stat-table th, .stat-table td { padding: 0.5rem; border: 1px solid var(--border); text-align: center; font-size: 0.85rem; }
@@ -485,7 +477,6 @@
     <div class="progress-bar-fill" id="progress-fill"></div>
   </div>
 
-  <!-- 0. 雙向 Google 翻譯查詢專區 -->
   <section id="view-search" class="hidden">
     <div class="g-translate-box">
       <div class="g-tabs-bar">
@@ -524,7 +515,6 @@
     </div>
   </section>
 
-  <!-- 1. 單字卡 (Tinder 左右手勢滑動 + 弱項優先) -->
   <section id="view-flashcards">
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <div style="display: flex; align-items: center;">
@@ -539,10 +529,8 @@
       </div>
     </div>
 
-    <!-- 舞台容器 -->
     <div class="flashcard-stage" id="fc-stage">
       <div class="flashcard-inner" id="fc-inner">
-        <!-- 滑動狀態標籤 -->
         <div class="swipe-stamp stamp-known" id="stamp-known">已掌握 ✓</div>
         <div class="swipe-stamp stamp-again" id="stamp-again">記不住 ✕</div>
 
@@ -569,7 +557,6 @@
     </div>
   </section>
 
-  <!-- 2. 學習模式 (四選一反向模式支援) -->
   <section id="view-learn" class="hidden">
     <div class="learn-panel">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
@@ -586,7 +573,6 @@
     </div>
   </section>
 
-  <!-- 3. 拼寫模式 (Diff 盲點比對 + 全 Enter 操作) -->
   <section id="view-write" class="hidden">
     <div class="write-panel">
       <div style="display: flex; justify-content: center; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem;">
@@ -604,7 +590,6 @@
     </div>
   </section>
 
-  <!-- 4. 配對遊戲 -->
   <section id="view-match" class="hidden">
     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem;">
       <div style="font-weight: bold; color: var(--primary);">⏱️ <span id="match-timer">0.0</span>s</div>
@@ -614,7 +599,6 @@
     <div class="match-grid" id="match-grid"></div>
   </section>
 
-  <!-- 5. 題庫管理 -->
   <section id="view-manage" class="hidden">
     <div class="cloud-card">
       <div>
@@ -639,7 +623,7 @@
           <button class="btn btn-danger" style="padding: 0.35rem 0.6rem; font-size: 0.85rem;" onclick="clearAllData()">🗑️ 清空</button>
         </div>
       </div>
-      <p style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 0.4rem;">一行一個英文單字：</p>
+      <p style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 0.4rem;">一行一個英文單字（貼上新單字點同步，新單字將自動置頂）：</p>
       <textarea id="raw-vocab-input" class="sync-area" placeholder="ephemeral&#10;ubiquitous&#10;resilient&#10;scrutinize&#10;pragmatic"></textarea>
       
       <div id="sync-status" style="color: var(--primary); font-size: 0.85rem; margin-top: 0.4rem; min-height: 1.2rem;"></div>
@@ -649,7 +633,7 @@
       </div>
 
       <div style="margin-top: 1.5rem;">
-        <h4 style="font-size: 1rem;">📊 學習統計 (最新加入置頂顯示)</h4>
+        <h4 style="font-size: 1rem;">📊 學習統計 (最新加入自動置頂最上方)</h4>
         <div class="table-responsive">
           <table class="stat-table">
             <thead>
@@ -702,7 +686,6 @@
   let toastTimer = null;
   let cloudSyncTimeout = null;
 
-  // Web Audio 輕量音效生成器（免外部音檔）
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   function playTone(freq, type = 'sine', duration = 0.15) {
     if (!isSoundEnabled) return;
@@ -740,7 +723,6 @@
     toastTimer = setTimeout(() => { toast.className = ''; }, 1800);
   }
 
-  // 主題與音效控制
   function initPreferences() {
     const savedTheme = localStorage.getItem(STORAGE_KEY_THEME);
     if (savedTheme === 'dark') {
@@ -782,12 +764,11 @@
     renderStatsTable();
     initFlashcards(true);
     bindEvents();
-    initTinderGestures(); // 啟動滑動手勢
+    initTinderGestures();
 
     await pullFromCloud(false);
   };
 
-  // --- 防覆蓋雲端同步引擎 ---
   async function pullFromCloud(showFeedback = true) {
     try {
       if (showFeedback) showToast('正在連接雲端並安全合併...', 'info');
@@ -800,7 +781,6 @@
 
       if (record && record.wordsText) {
         const cloudList = parseTextToList(record.wordsText);
-        // 雙向聯集合併：兩端互相補齊，絕不刪減
         const mergedList = [...new Set([...vocabList, ...cloudList])];
         vocabList = mergedList;
 
@@ -1173,10 +1153,25 @@
     if (hasUpdate) scheduleCloudPush();
   }
 
-  async function syncVocabDatabase() {
-    const rawText = document.getElementById('raw-vocab-input').value;
-    localStorage.setItem(STORAGE_KEY_TEXT, rawText);
-    vocabList = parseTextToList(rawText);
+  // --- 核心更新：同步/匯入新單字自動置頂 ---
+  async function syncVocabDatabase(importedRawText = null) {
+    const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
+    const incomingList = parseTextToList(rawText);
+
+    // 抓出原本題庫中「不存在」的全新單字
+    const brandNewWords = incomingList.filter(w => !vocabList.includes(w));
+    // 其餘原本就存在的單字保留原排序
+    const oldWords = vocabList.filter(w => incomingList.includes(w));
+    // 另外 incoming 裡面重複或刪除的調整
+    const otherIncomingExisting = incomingList.filter(w => vocabList.includes(w) && !oldWords.includes(w));
+
+    // 全新單字插在最前面 (置頂)
+    vocabList = [...brandNewWords, ...oldWords, ...otherIncomingExisting];
+
+    const newText = vocabList.join('\n');
+    document.getElementById('raw-vocab-input').value = newText;
+    localStorage.setItem(STORAGE_KEY_TEXT, newText);
+
     await autoFillMissingTranslations();
   }
 
@@ -1244,7 +1239,7 @@
     return [...weakList, ...strongList];
   }
 
-  // --- 1. Flashcards (Tinder 拖曳滑動手勢核心) ---
+  // --- 1. Flashcards (單字卡) ---
   function initFlashcards(shouldShuffle = true) {
     if (vocabList.length === 0) {
       flashcardQueue = [];
@@ -1282,7 +1277,6 @@
     cardInner.style.transform = '';
     isCardFlipped = false;
 
-    // 清空戳章
     document.getElementById('stamp-known').style.opacity = 0;
     document.getElementById('stamp-again').style.opacity = 0;
 
@@ -1336,14 +1330,12 @@
     if (mastered) soundFX.correct();
     else soundFX.wrong();
 
-    // 觸發飛出動畫
     cardInner.classList.add(mastered ? 'swipe-out-right' : 'swipe-out-left');
     recordStat(flashcardQueue[currentWordIndex], mastered);
 
     setTimeout(() => { nextCard(); }, 250);
   }
 
-  // 行動端 Tinder 拖曳滑動監聽
   function initTinderGestures() {
     const card = document.getElementById('fc-inner');
     const stampKnown = document.getElementById('stamp-known');
@@ -1365,14 +1357,12 @@
       currentX = e.touches[0].clientX - startX;
       const currentY = e.touches[0].clientY - startY;
 
-      // 若上下滾動量大於左右，則交給頁面捲動
       if (Math.abs(currentY) > Math.abs(currentX) && Math.abs(currentX) < 20) return;
 
       const rotate = currentX * 0.08;
       const flipTransform = isCardFlipped ? 'rotateY(180deg)' : '';
       card.style.transform = `translateX(${currentX}px) rotate(${rotate}deg) ${flipTransform}`;
 
-      // 拖曳半透明戳章反饋
       if (currentX > 30) {
         stampKnown.style.opacity = Math.min(1, (currentX - 30) / 80);
         stampAgain.style.opacity = 0;
@@ -1390,28 +1380,25 @@
       isDragging = false;
       card.classList.remove('swiping');
 
-      // 拖曳超過閾值則觸發判定
       if (currentX > 90) {
         markCardMastery(true);
       } else if (currentX < -90) {
         markCardMastery(false);
       } else {
-        // 回彈
         card.style.transform = isCardFlipped ? 'rotateY(180deg)' : '';
         stampKnown.style.opacity = 0;
         stampAgain.style.opacity = 0;
-        if (Math.abs(currentX) < 10) flipCard(); // 若幾乎沒移動則視為點擊翻面
+        if (Math.abs(currentX) < 10) flipCard();
       }
     });
 
-    // 電腦點擊翻面
     card.addEventListener('click', (e) => {
       if (e.target.closest('.card-speech-btn')) return;
       if (window.innerWidth > 600) flipCard();
     });
   }
 
-  // --- 2. Learn (四選一反向模式支援) ---
+  // --- 2. Learn (四選一反向模式) ---
   function startLearnMode() {
     if (vocabList.length < 4) {
       showToast('學習模式至少需要 4 個單字！', 'warning');
@@ -1439,7 +1426,6 @@
     const targetWord = learnQueue[currentLearnIndex];
     const targetMeaning = vocabStats[targetWord] ? vocabStats[targetWord].meaning : '...';
 
-    // 題目與選項方向
     const questionText = learnDirection === 'zh2en' ? targetMeaning : targetWord;
     const labelText = learnDirection === 'zh2en' ? '繁體中文釋義（請選出英文單字）：' : '英文單字（請選出中文釋義）：';
     document.getElementById('learn-prompt-label').textContent = labelText;
@@ -1504,7 +1490,7 @@
     }
   }
 
-  // --- 3. Write (Diff 拼寫盲點比對 + Enter 導航) ---
+  // --- 3. Write ---
   function startWriteMode() {
     if (vocabList.length === 0) {
       showToast('請先在題庫管理新增單字！', 'warning');
@@ -1561,7 +1547,6 @@
     }
   }
 
-  // 拼寫錯誤字母比對高亮
   function renderDiffHighlight(userStr, targetStr) {
     const box = document.getElementById('write-diff-box');
     box.innerHTML = '';
@@ -1813,15 +1798,15 @@
     if (mode === 'search') document.getElementById('lookup-input').focus();
   }
 
+  // 匯入檔案：新單字自動排在最上方置頂
   function handleFileImport(e) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async function(evt) {
       showToast('正在解析匯入單字並建立 Google 翻譯索引...', 'info');
-      document.getElementById('raw-vocab-input').value = evt.target.result;
-      await syncVocabDatabase();
-      showToast('✓ 檔案匯入並自動完成 Google 翻譯索引！', 'success');
+      await syncVocabDatabase(evt.target.result);
+      showToast('✓ 檔案匯入完成！新單字已置頂至最上方！', 'success');
     };
     reader.readAsText(file);
     e.target.value = '';
