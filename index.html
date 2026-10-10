@@ -620,4 +620,988 @@
   }
 
   function showToast(message, type = 'success') {
-    const toast = document.getElementById('
+    const toast = document.getElementById('toast-notice');
+    toast.textContent = message;
+    toast.className = `show ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.className = ''; }, 1800);
+  }
+
+  window.onload = async function() {
+    const savedText = localStorage.getItem(STORAGE_KEY_TEXT);
+    const savedStats = localStorage.getItem(STORAGE_KEY_STATS);
+    if (savedStats) vocabStats = JSON.parse(savedStats);
+    if (savedText) {
+      document.getElementById('raw-vocab-input').value = savedText;
+      vocabList = parseTextToList(savedText);
+    } else {
+      vocabList = [];
+    }
+
+    renderStatsTable();
+    initFlashcards(true);
+    bindEvents();
+
+    // 啟動時執行「安全靜默合併同步」
+    await pullFromCloud(false);
+  };
+
+  // --- 終極防覆蓋同步引擎 ---
+  async function pullFromCloud(showFeedback = true) {
+    try {
+      if (showFeedback) showToast('正在連接雲端並安全合併...', 'info');
+      const res = await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}/latest`, {
+        headers: { 'X-Master-Key': CLOUD_MASTER_KEY }
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const record = data.record;
+
+      if (record && record.wordsText) {
+        const cloudList = parseTextToList(record.wordsText);
+
+        // 防線 1：雙向聯集合併（Merge），兩端單字互補，絕不直接用雲端覆蓋洗掉本機
+        const mergedList = [...new Set([...vocabList, ...cloudList])];
+        vocabList = mergedList;
+
+        if (record.wordsStats) {
+          // 合併歷史學習統計，保留次數較高者
+          for (let w in record.wordsStats) {
+            if (!vocabStats[w]) {
+              vocabStats[w] = record.wordsStats[w];
+            } else {
+              vocabStats[w].meaning = vocabStats[w].meaning || record.wordsStats[w].meaning;
+              vocabStats[w].total = Math.max(vocabStats[w].total, record.wordsStats[w].total);
+              vocabStats[w].correct = Math.max(vocabStats[w].correct, record.wordsStats[w].correct);
+            }
+          }
+        }
+
+        const newText = vocabList.join('\n');
+        document.getElementById('raw-vocab-input').value = newText;
+        localStorage.setItem(STORAGE_KEY_TEXT, newText);
+        localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
+
+        await autoFillMissingTranslations();
+        if (showFeedback) showToast('✓ 雲端資料已安全合併完畢！', 'success');
+      }
+    } catch {
+      if (showFeedback) showToast('無法連接雲端，維持目前本機題庫', 'warning');
+    }
+  }
+
+  async function pushToCloud(showFeedback = false) {
+    // 防線 2：如果本機為空，拒絕推送覆蓋雲端
+    if (vocabList.length === 0) {
+      if (showFeedback) showToast('本機題庫為空，拒絕推送以防清空雲端！', 'warning');
+      return;
+    }
+
+    const payload = {
+      wordsText: document.getElementById('raw-vocab-input').value,
+      wordsStats: vocabStats,
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      const res = await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': CLOUD_MASTER_KEY
+        },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok && showFeedback) {
+        showToast('✓ 雲端備份已更新成功！', 'success');
+      }
+    } catch {
+      if (showFeedback) showToast('推送到雲端失敗', 'warning');
+    }
+  }
+
+  function scheduleCloudPush() {
+    clearTimeout(cloudSyncTimeout);
+    cloudSyncTimeout = setTimeout(() => {
+      pushToCloud(false);
+    }, 2000);
+  }
+
+  function parseTextToList(text) {
+    return [...new Set(text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w.length > 0))];
+  }
+
+  function speakVoice(text, lang = 'en-US') {
+    if (!text) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function speakCurrentFaceWord(forceFront = null) {
+    if (flashcardQueue.length === 0) return;
+    const word = flashcardQueue[currentWordIndex];
+    const meaning = vocabStats[word] ? vocabStats[word].meaning : '';
+
+    let isShowingFront = forceFront !== null ? forceFront : !isCardFlipped;
+    let textToSpeak = '';
+    let lang = 'en-US';
+
+    if (cardOrientation === 'en-first') {
+      textToSpeak = isShowingFront ? word : meaning;
+      lang = isShowingFront ? 'en-US' : 'zh-TW';
+    } else {
+      textToSpeak = isShowingFront ? meaning : word;
+      lang = isShowingFront ? 'zh-TW' : 'en-US';
+    }
+
+    speakVoice(textToSpeak, lang);
+  }
+
+  function toggleAutoSpeech() {
+    isAutoSpeechOn = !isAutoSpeechOn;
+    const btn = document.getElementById('btn-auto-speech');
+    if (isAutoSpeechOn) {
+      btn.textContent = '🔊 自動發音：開';
+      btn.style.background = '#e8f0fe';
+      btn.style.color = 'var(--primary)';
+      speakCurrentFaceWord();
+    } else {
+      btn.textContent = '🔈 自動發音：關';
+      btn.style.background = '#e8eaed';
+      btn.style.color = 'var(--text-main)';
+    }
+  }
+
+  function speakInputContent() {
+    const text = document.getElementById('lookup-input').value;
+    speakVoice(text, detectedDirection === 'en2zh' ? 'en-US' : 'zh-TW');
+  }
+
+  function speakResultContent() {
+    const text = document.getElementById('lookup-result-text').textContent;
+    if (text && !text.includes('...')) {
+      speakVoice(text, detectedDirection === 'en2zh' ? 'zh-TW' : 'en-US');
+    }
+  }
+
+  function hasChinese(str) {
+    return /[\u4e00-\u9fa5]/.test(str);
+  }
+
+  async function fetchDetailedGoogleTranslation(text, sl, tl) {
+    if (!text) return { primary: '', alternatives: [] };
+    try {
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&dt=bd&q=${encodeURIComponent(text)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      
+      let primary = '';
+      if (data && data[0]) {
+        primary = data[0].map(item => item[0]).join('').trim();
+        if (tl === 'zh-TW') primary = toTraditionalChinese(primary);
+      }
+
+      let alternatives = [];
+      if (data && data[1] && Array.isArray(data[1])) {
+        data[1].forEach(dictItem => {
+          if (dictItem[1] && Array.isArray(dictItem[1])) {
+            dictItem[1].forEach(alt => {
+              const converted = tl === 'zh-TW' ? toTraditionalChinese(alt) : alt.toLowerCase().trim();
+              if (converted && !alternatives.includes(converted)) {
+                alternatives.push(converted);
+              }
+            });
+          }
+        });
+      }
+
+      return { primary, alternatives };
+    } catch {
+      return { primary: '（查無翻譯）', alternatives: [] };
+    }
+  }
+
+  function updateLanguageLabels() {
+    const src = document.getElementById('label-source-lang');
+    const tgt = document.getElementById('label-target-lang');
+    if (detectedDirection === 'en2zh') {
+      src.textContent = "🇺🇸 英文 (English)";
+      tgt.textContent = "🇹🇼 繁體中文 (繁體)";
+    } else {
+      src.textContent = "🇹🇼 繁體中文 (繁體)";
+      tgt.textContent = "🇺🇸 英文 (English)";
+    }
+  }
+
+  function swapTranslateDirections() {
+    const inputElem = document.getElementById('lookup-input');
+    const resElem = document.getElementById('lookup-result-text');
+    const prevResult = resElem.textContent;
+
+    if (prevResult && !prevResult.includes('...')) {
+      inputElem.value = prevResult;
+    }
+
+    detectedDirection = detectedDirection === 'en2zh' ? 'zh2en' : 'en2zh';
+    currentDirection = detectedDirection;
+    updateLanguageLabels();
+    handleGoogleInput();
+  }
+
+  function handleGoogleInput() {
+    const text = document.getElementById('lookup-input').value;
+    document.getElementById('lookup-count').textContent = `${text.length} 字元`;
+
+    clearTimeout(searchDebounceTimer);
+    const trimmed = text.trim();
+    const resBox = document.getElementById('lookup-result-text');
+    const altBox = document.getElementById('alt-meanings-box');
+    const addBtn = document.getElementById('add-to-vocab-btn');
+
+    if (!trimmed) {
+      resBox.textContent = "翻譯將自動顯示於此...";
+      resBox.classList.add('g-result-placeholder');
+      altBox.classList.add('hidden');
+      addBtn.disabled = true;
+      currentSearchedWord = '';
+      selectedMeanings = [];
+      return;
+    }
+
+    if (currentDirection === 'auto') {
+      detectedDirection = hasChinese(trimmed) ? 'zh2en' : 'en2zh';
+      updateLanguageLabels();
+    }
+
+    resBox.textContent = "Google 翻譯中...";
+    resBox.classList.remove('g-result-placeholder');
+    altBox.classList.add('hidden');
+
+    const sl = detectedDirection === 'en2zh' ? 'en' : 'zh-TW';
+    const tl = detectedDirection === 'en2zh' ? 'zh-TW' : 'en';
+
+    searchDebounceTimer = setTimeout(async () => {
+      const { primary, alternatives } = await fetchDetailedGoogleTranslation(trimmed, sl, tl);
+
+      if (detectedDirection === 'en2zh') {
+        currentSearchedWord = trimmed.toLowerCase();
+        selectedMeanings = [primary];
+        resBox.textContent = primary;
+        renderAltChips(alternatives, primary, 'en2zh');
+      } else {
+        currentSearchedWord = primary.toLowerCase();
+        selectedMeanings = [trimmed];
+        resBox.textContent = primary;
+        renderAltChips(alternatives, primary, 'zh2en');
+      }
+      addBtn.disabled = false;
+    }, 350);
+  }
+
+  function renderAltChips(alternatives, currentDefault, mode) {
+    const altBox = document.getElementById('alt-meanings-box');
+    const titleElem = document.getElementById('alt-meanings-title');
+    const chipsContainer = document.getElementById('alt-meanings-chips');
+    chipsContainer.innerHTML = '';
+
+    const filtered = alternatives.filter(a => a.toLowerCase() !== currentDefault.toLowerCase());
+
+    if (filtered.length === 0) {
+      altBox.classList.add('hidden');
+      return;
+    }
+
+    altBox.classList.remove('hidden');
+
+    if (mode === 'en2zh') {
+      titleElem.textContent = '點擊可增加/取消其他中文解釋：';
+      filtered.forEach(alt => {
+        const chip = document.createElement('span');
+        chip.className = 'alt-chip';
+        chip.textContent = `+ ${alt}`;
+        chip.onclick = () => toggleAltChineseMeaning(alt, chip);
+        chipsContainer.appendChild(chip);
+      });
+    } else {
+      titleElem.textContent = '點擊選取想要的英文單字：';
+      filtered.forEach(alt => {
+        const chip = document.createElement('span');
+        chip.className = 'alt-chip';
+        chip.textContent = alt;
+        chip.onclick = () => selectAltEnglishWord(alt);
+        chipsContainer.appendChild(chip);
+      });
+    }
+  }
+
+  function toggleAltChineseMeaning(meaning, chipElem) {
+    if (selectedMeanings.includes(meaning)) {
+      selectedMeanings = selectedMeanings.filter(m => m !== meaning);
+      chipElem.classList.remove('active');
+      chipElem.textContent = `+ ${meaning}`;
+    } else {
+      selectedMeanings.push(meaning);
+      chipElem.classList.add('active');
+      chipElem.textContent = `✓ ${meaning}`;
+    }
+    document.getElementById('lookup-result-text').textContent = selectedMeanings.join('；');
+  }
+
+  function selectAltEnglishWord(word) {
+    currentSearchedWord = word.toLowerCase();
+    document.getElementById('lookup-result-text').textContent = word;
+    showToast(`已選定單字：${word}`, 'info');
+  }
+
+  function clearLookupInput() {
+    document.getElementById('lookup-input').value = '';
+    currentDirection = 'auto';
+    handleGoogleInput();
+  }
+
+  function copyTranslation() {
+    const text = document.getElementById('lookup-result-text').textContent;
+    if (!text || text.includes('...')) return;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('✓ 已複製翻譯結果！', 'info');
+    });
+  }
+
+  // 加入單字庫：新詞自動置頂最上方
+  function addSearchedWordToVocab() {
+    if (!currentSearchedWord || selectedMeanings.length === 0) return;
+
+    const finalMeaning = selectedMeanings.join('；');
+
+    if (vocabList.includes(currentSearchedWord)) {
+      if (vocabStats[currentSearchedWord]) {
+        const exist = vocabStats[currentSearchedWord].meaning;
+        if (!exist.includes(finalMeaning)) {
+          vocabStats[currentSearchedWord].meaning = `${exist}；${finalMeaning}`;
+          vocabList = [currentSearchedWord, ...vocabList.filter(w => w !== currentSearchedWord)];
+          const newText = vocabList.join('\n');
+          document.getElementById('raw-vocab-input').value = newText;
+          localStorage.setItem(STORAGE_KEY_TEXT, newText);
+          localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
+
+          renderStatsTable();
+          initFlashcards(false);
+          refreshWriteModeData();
+          showToast(`✓ 已為「${currentSearchedWord}」擴充新釋義並置頂！`, 'success');
+          scheduleCloudPush();
+          return;
+        }
+      }
+      showToast(`「${currentSearchedWord}」已存在於單字庫中`, 'warning');
+      return;
+    }
+
+    vocabList.unshift(currentSearchedWord);
+    vocabStats[currentSearchedWord] = { meaning: finalMeaning, correct: 0, total: 0 };
+
+    const newText = vocabList.join('\n');
+    document.getElementById('raw-vocab-input').value = newText;
+    localStorage.setItem(STORAGE_KEY_TEXT, newText);
+    localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
+
+    renderStatsTable();
+    initFlashcards(true);
+    refreshWriteModeData();
+    showToast(`✓ 已加入單字庫並置頂：${currentSearchedWord}`, 'success');
+    scheduleCloudPush();
+  }
+
+  async function autoFillMissingTranslations() {
+    const statusBox = document.getElementById('sync-status');
+    let hasUpdate = false;
+
+    for (let i = 0; i < vocabList.length; i++) {
+      const w = vocabList[i];
+      if (!vocabStats[w] || !vocabStats[w].meaning || vocabStats[w].meaning === '...') {
+        statusBox.textContent = `Google 翻譯自動解析中 (${i + 1}/${vocabList.length}): ${w}...`;
+        const { primary } = await fetchDetailedGoogleTranslation(w, 'en', 'zh-TW');
+        vocabStats[w] = { meaning: primary || '（暫無釋義）', correct: (vocabStats[w] ? vocabStats[w].correct : 0), total: (vocabStats[w] ? vocabStats[w].total : 0) };
+        hasUpdate = true;
+      }
+    }
+
+    statusBox.textContent = hasUpdate ? '✓ 翻譯索引已自動補齊完畢！' : '';
+    setTimeout(() => { if (statusBox.textContent.includes('✓')) statusBox.textContent = ''; }, 2000);
+
+    localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
+    renderStatsTable();
+    initFlashcards(false);
+    refreshWriteModeData();
+
+    if (hasUpdate) scheduleCloudPush();
+  }
+
+  async function syncVocabDatabase() {
+    const rawText = document.getElementById('raw-vocab-input').value;
+    localStorage.setItem(STORAGE_KEY_TEXT, rawText);
+    vocabList = parseTextToList(rawText);
+    await autoFillMissingTranslations();
+  }
+
+  function saveEditedMeaning(word) {
+    const inputElem = document.getElementById(`edit-meaning-${word}`);
+    if (!inputElem) return;
+    const newMeaning = toTraditionalChinese(inputElem.value.trim());
+    if (!newMeaning) {
+      showToast('釋義不能為空！', 'warning');
+      return;
+    }
+
+    if (!vocabStats[word]) {
+      vocabStats[word] = { meaning: newMeaning, correct: 0, total: 0 };
+    } else {
+      vocabStats[word].meaning = newMeaning;
+    }
+
+    localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
+    showToast(`✓ 「${word}」繁體釋義已更新！`, 'success');
+    renderStatsTable();
+    updateCardDisplay();
+    refreshWriteModeData();
+    scheduleCloudPush();
+  }
+
+  function deleteSingleWord(word) {
+    if (!confirm(`確定要從單字庫中刪除英文單字「${word}」嗎？`)) return;
+    vocabList = vocabList.filter(w => w !== word);
+    delete vocabStats[word];
+
+    const newText = vocabList.join('\n');
+    document.getElementById('raw-vocab-input').value = newText;
+    localStorage.setItem(STORAGE_KEY_TEXT, newText);
+    localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
+
+    renderStatsTable();
+    initFlashcards(true);
+    refreshWriteModeData();
+    showToast(`✓ 已刪除單字「${word}」`, 'info');
+    scheduleCloudPush();
+  }
+
+  function getWordAccuracy(w) {
+    if (!vocabStats[w] || vocabStats[w].total === 0) return 0;
+    return (vocabStats[w].correct / vocabStats[w].total) * 100;
+  }
+
+  function buildWeaknessPrioritizedQueue() {
+    const weakList = [];
+    const strongList = [];
+
+    vocabList.forEach(w => {
+      const acc = getWordAccuracy(w);
+      if (acc < 50) {
+        weakList.push(w);
+      } else {
+        strongList.push(w);
+      }
+    });
+
+    weakList.sort(() => Math.random() - 0.5);
+    strongList.sort(() => Math.random() - 0.5);
+
+    return [...weakList, ...strongList];
+  }
+
+  // --- 1. Flashcards ---
+  function initFlashcards(shouldShuffle = true) {
+    if (vocabList.length === 0) {
+      flashcardQueue = [];
+      document.getElementById('fc-front-text').textContent = '尚無單字';
+      document.getElementById('fc-back-text').textContent = '請至題庫管理添加';
+      document.getElementById('fc-counter').textContent = '0 / 0';
+      document.getElementById('fc-weak-tag').classList.add('hidden');
+      updateProgress(0);
+      return;
+    }
+
+    if (shouldShuffle || flashcardQueue.length !== vocabList.length) {
+      flashcardQueue = buildWeaknessPrioritizedQueue();
+    }
+
+    currentWordIndex = 0;
+    updateCardDisplay();
+  }
+
+  function shuffleFlashcards() {
+    if (vocabList.length <= 1) {
+      showToast('單字量不足，無法洗牌', 'info');
+      return;
+    }
+    flashcardQueue = buildWeaknessPrioritizedQueue();
+    currentWordIndex = 0;
+    updateCardDisplay();
+    showToast('🔀 已重新洗牌（正確率低於 50% 弱項優先排前）！', 'success');
+  }
+
+  function updateCardDisplay() {
+    if (flashcardQueue.length === 0) return;
+    const word = flashcardQueue[currentWordIndex];
+    const meaning = vocabStats[word] ? vocabStats[word].meaning : '載入中...';
+    document.getElementById('fc-inner').classList.remove('flipped');
+    isCardFlipped = false;
+
+    document.getElementById('fc-front-text').textContent = cardOrientation === 'en-first' ? word : meaning;
+    document.getElementById('fc-back-text').textContent = cardOrientation === 'en-first' ? meaning : word;
+    document.getElementById('fc-counter').textContent = `${currentWordIndex + 1} / ${flashcardQueue.length}`;
+    
+    const acc = getWordAccuracy(word);
+    const weakTag = document.getElementById('fc-weak-tag');
+    if (acc < 50) {
+      weakTag.classList.remove('hidden');
+      weakTag.textContent = vocabStats[word] && vocabStats[word].total > 0 ? `⚠️ 正確率 ${Math.round(acc)}%` : '⚠️ 新單字優先';
+    } else {
+      weakTag.classList.add('hidden');
+    }
+
+    updateProgress((currentWordIndex + 1) / flashcardQueue.length);
+
+    if (isAutoSpeechOn) {
+      speakCurrentFaceWord();
+    }
+  }
+
+  function flipCard() {
+    if (flashcardQueue.length === 0) return;
+    isCardFlipped = !isCardFlipped;
+    document.getElementById('fc-inner').classList.toggle('flipped', isCardFlipped);
+  }
+
+  function nextCard() {
+    if (flashcardQueue.length === 0) return;
+    currentWordIndex = (currentWordIndex + 1) % flashcardQueue.length;
+    updateCardDisplay();
+  }
+
+  function prevCard() {
+    if (flashcardQueue.length === 0) return;
+    currentWordIndex = (currentWordIndex - 1 + flashcardQueue.length) % flashcardQueue.length;
+    updateCardDisplay();
+  }
+
+  function toggleCardOrientation() {
+    cardOrientation = cardOrientation === 'en-first' ? 'zh-first' : 'en-first';
+    updateCardDisplay();
+  }
+
+  function markCardMastery(mastered) {
+    if (flashcardQueue.length === 0) return;
+    recordStat(flashcardQueue[currentWordIndex], mastered);
+    nextCard();
+  }
+
+  // --- 2. Learn ---
+  function startLearnMode() {
+    if (vocabList.length < 4) {
+      showToast('學習模式至少需要 4 個單字！', 'warning');
+      switchView('manage');
+      return;
+    }
+    learnQueue = buildWeaknessPrioritizedQueue();
+    currentLearnIndex = 0;
+    loadLearnQuestion();
+  }
+
+  function loadLearnQuestion() {
+    canChooseLearn = true;
+    document.getElementById('learn-feedback').textContent = '';
+    document.getElementById('learn-next-btn').classList.add('hidden');
+    
+    const targetWord = learnQueue[currentLearnIndex];
+    document.getElementById('learn-question').textContent = vocabStats[targetWord] ? vocabStats[targetWord].meaning : '...';
+
+    const acc = getWordAccuracy(targetWord);
+    const weakTag = document.getElementById('learn-weak-tag');
+    if (acc < 50) {
+      weakTag.classList.remove('hidden');
+      weakTag.textContent = vocabStats[targetWord] && vocabStats[targetWord].total > 0 ? `⚠️ 正確率 ${Math.round(acc)}%` : '⚠️ 新單字優先';
+    } else {
+      weakTag.classList.add('hidden');
+    }
+
+    const distractors = vocabList.filter(w => w !== targetWord).sort(() => Math.random() - 0.5).slice(0, 3);
+    const options = [targetWord, ...distractors].sort(() => Math.random() - 0.5);
+
+    const container = document.getElementById('learn-options');
+    container.innerHTML = '';
+    options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'opt-btn';
+      btn.textContent = opt;
+      btn.onclick = () => handleLearnChoice(btn, opt, targetWord);
+      container.appendChild(btn);
+    });
+    updateProgress((currentLearnIndex + 1) / learnQueue.length);
+  }
+
+  function handleLearnChoice(selectedBtn, chosenWord, targetWord) {
+    if (!canChooseLearn) return;
+    canChooseLearn = false;
+
+    const isCorrect = chosenWord === targetWord;
+    recordStat(targetWord, isCorrect);
+
+    if (isCorrect) {
+      selectedBtn.classList.add('correct');
+      setTimeout(() => { nextLearnQuestion(); }, 400);
+    } else {
+      selectedBtn.classList.add('wrong');
+      document.querySelectorAll('.opt-btn').forEach(b => {
+        if (b.textContent === targetWord) b.classList.add('correct');
+      });
+      document.getElementById('learn-feedback').textContent = `答錯！正確解答為：${targetWord}`;
+      document.getElementById('learn-feedback').style.color = 'var(--danger)';
+      learnQueue.push(targetWord);
+      document.getElementById('learn-next-btn').classList.remove('hidden');
+    }
+  }
+
+  function nextLearnQuestion() {
+    currentLearnIndex++;
+    if (currentLearnIndex < learnQueue.length) {
+      loadLearnQuestion();
+    } else {
+      showToast('太棒了！本輪學習題目全數通關！', 'success');
+      switchView('flashcards');
+    }
+  }
+
+  // --- 3. Write ---
+  function startWriteMode() {
+    if (vocabList.length === 0) {
+      showToast('請先在題庫管理新增單字！', 'warning');
+      switchView('manage');
+      return;
+    }
+    writeQueue = buildWeaknessPrioritizedQueue();
+    currentWriteIndex = 0;
+    loadWriteQuestion();
+  }
+
+  function refreshWriteModeData() {
+    if (writeQueue.length > 0 && currentWriteIndex < writeQueue.length) {
+      const targetWord = writeQueue[currentWriteIndex];
+      const meaning = vocabStats[targetWord] ? vocabStats[targetWord].meaning : '...';
+      const promptElem = document.getElementById('write-prompt');
+      if (promptElem) promptElem.textContent = meaning;
+    }
+  }
+
+  function loadWriteQuestion() {
+    const targetWord = writeQueue[currentWriteIndex];
+    document.getElementById('write-prompt').textContent = vocabStats[targetWord] ? vocabStats[targetWord].meaning : '...';
+    
+    const acc = getWordAccuracy(targetWord);
+    const weakTag = document.getElementById('write-weak-tag');
+    if (acc < 50) {
+      weakTag.classList.remove('hidden');
+      weakTag.textContent = vocabStats[targetWord] && vocabStats[targetWord].total > 0 ? `⚠️ 正確率 ${Math.round(acc)}%` : '⚠️ 新單字優先';
+    } else {
+      weakTag.classList.add('hidden');
+    }
+
+    const input = document.getElementById('write-input');
+    input.value = '';
+    input.disabled = false;
+    document.getElementById('write-feedback').textContent = '';
+    document.getElementById('write-submit-btn').classList.remove('hidden');
+    document.getElementById('write-next-btn').classList.add('hidden');
+    updateProgress((currentWriteIndex + 1) / writeQueue.length);
+    setTimeout(() => input.focus(), 50);
+  }
+
+  function handleWriteEnter(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const nextBtn = document.getElementById('write-next-btn');
+      if (!nextBtn.classList.contains('hidden')) {
+        nextWriteQuestion();
+      } else {
+        submitWriteAnswer();
+      }
+    }
+  }
+
+  async function submitWriteAnswer() {
+    const input = document.getElementById('write-input');
+    const userVal = input.value.trim().toLowerCase();
+    if (!userVal) return;
+
+    const targetWord = writeQueue[currentWriteIndex];
+    const targetMeaning = vocabStats[targetWord] ? vocabStats[targetWord].meaning : '';
+    const fb = document.getElementById('write-feedback');
+    let isCorrect = userVal === targetWord;
+
+    if (!isCorrect) {
+      fb.textContent = 'Google 語意比對中...';
+      const { primary } = await fetchDetailedGoogleTranslation(userVal, 'en', 'zh-TW');
+      if (userMeaningMatch(primary, targetMeaning)) isCorrect = true;
+    }
+
+    recordStat(targetWord, isCorrect);
+    input.disabled = true;
+    document.getElementById('write-submit-btn').classList.add('hidden');
+    
+    const nextBtn = document.getElementById('write-next-btn');
+    nextBtn.classList.remove('hidden');
+    nextBtn.focus();
+
+    if (isCorrect) {
+      fb.textContent = userVal !== targetWord ? `答對了！（同義詞接受，原庫：${targetWord}）` : '完全正確！';
+      fb.style.color = 'var(--success)';
+    } else {
+      fb.textContent = `拼寫錯誤！正確答案：${targetWord}`;
+      fb.style.color = 'var(--danger)';
+      writeQueue.push(targetWord);
+    }
+  }
+
+  function userMeaningMatch(a, b) {
+    if (!a || !b) return false;
+    const partsA = a.split(/[；,，、]/).map(s => s.trim());
+    const partsB = b.split(/[；,，、]/).map(s => s.trim());
+    return partsA.some(pa => partsB.some(pb => pa.includes(pb) || pb.includes(pa)));
+  }
+
+  function nextWriteQuestion() {
+    currentWriteIndex++;
+    if (currentWriteIndex < writeQueue.length) {
+      loadWriteQuestion();
+    } else {
+      showToast('英文拼寫測驗全數完成！', 'success');
+      switchView('flashcards');
+    }
+  }
+
+  // --- 4. Match ---
+  function startMatchGame() {
+    clearInterval(matchTimer);
+    document.getElementById('match-best').textContent = localStorage.getItem(STORAGE_KEY_MATCH_BEST) ? `${localStorage.getItem(STORAGE_KEY_MATCH_BEST)}s` : '無';
+    
+    if (vocabList.length < 2) {
+      showToast('配對遊戲至少需要 2 組單字！', 'warning');
+      switchView('manage');
+      return;
+    }
+
+    const prioritizedPool = buildWeaknessPrioritizedQueue();
+    const sample = prioritizedPool.slice(0, 6);
+
+    let deck = [];
+    sample.forEach(w => {
+      deck.push({ id: w, text: w, type: 'en' });
+      deck.push({ id: w, text: vocabStats[w] ? vocabStats[w].meaning : '...', type: 'zh' });
+    });
+    deck.sort(() => Math.random() - 0.5);
+
+    const grid = document.getElementById('match-grid');
+    grid.innerHTML = '';
+    deck.forEach(item => {
+      const tile = document.createElement('div');
+      tile.className = 'match-tile';
+      tile.textContent = item.text;
+      tile.onclick = () => handleTileClick(tile, item);
+      grid.appendChild(tile);
+    });
+
+    selectedTile = null;
+    matchedPairsCount = 0;
+    matchStartTime = Date.now();
+    matchTimer = setInterval(() => {
+      document.getElementById('match-timer').textContent = ((Date.now() - matchStartTime) / 1000).toFixed(1);
+    }, 100);
+  }
+
+  function handleTileClick(tileElem, itemData) {
+    if (tileElem.classList.contains('matched') || tileElem === (selectedTile && selectedTile.elem)) return;
+
+    if (!selectedTile) {
+      selectedTile = { elem: tileElem, data: itemData };
+      tileElem.classList.add('selected');
+    } else {
+      if (selectedTile.data.id === itemData.id && selectedTile.data.type !== itemData.type) {
+        tileElem.classList.add('matched');
+        selectedTile.elem.classList.add('matched');
+        matchedPairsCount++;
+        selectedTile = null;
+
+        if (matchedPairsCount >= 6 || matchedPairsCount === Math.min(vocabList.length, 6)) {
+          clearInterval(matchTimer);
+          const finalScore = ((Date.now() - matchStartTime) / 1000).toFixed(1);
+          const best = localStorage.getItem(STORAGE_KEY_MATCH_BEST);
+          if (!best || parseFloat(finalScore) < parseFloat(best)) {
+            localStorage.setItem(STORAGE_KEY_MATCH_BEST, finalScore);
+            showToast(`🎉 恭喜破紀錄！耗時：${finalScore} 秒`, 'success');
+          } else {
+            showToast(`配對完成！耗時：${finalScore} 秒`, 'info');
+          }
+          startMatchGame();
+        }
+      } else {
+        tileElem.classList.add('wrong');
+        selectedTile.elem.classList.add('wrong');
+        setTimeout(() => {
+          tileElem.classList.remove('selected', 'wrong');
+          selectedTile.elem.classList.remove('selected', 'wrong');
+          selectedTile = null;
+        }, 400);
+      }
+    }
+  }
+
+  // --- 統計數據與進度 ---
+  function recordStat(word, isCorrect) {
+    if (vocabStats[word]) {
+      vocabStats[word].total += 1;
+      if (isCorrect) vocabStats[word].correct += 1;
+      localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
+      renderStatsTable();
+      scheduleCloudPush();
+    }
+  }
+
+  function renderStatsTable() {
+    const tbody = document.getElementById('stat-table-body');
+    tbody.innerHTML = '';
+    if (vocabList.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-sub); padding:1rem;">目前英文單字庫為空</td></tr>';
+      return;
+    }
+
+    vocabList.forEach(w => {
+      const item = vocabStats[w] || { meaning: '...', correct: 0, total: 0 };
+      const rate = item.total === 0 ? 0 : Math.round((item.correct / item.total) * 100);
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>
+          <div class="word-cell">
+            <b>${w}</b>
+            <button class="speak-inline-btn" title="朗讀單字" onclick="speakVoice('${w}', 'en-US')">🔊</button>
+          </div>
+        </td>
+        <td>
+          <input type="text" id="edit-meaning-${w}" class="edit-meaning-input" value="${item.meaning}">
+          <button class="edit-save-btn" onclick="saveEditedMeaning('${w}')">儲存</button>
+        </td>
+        <td>${item.total}</td>
+        <td style="color:${rate < 60 ? 'var(--danger)' : 'var(--success)'}; font-weight:bold;">
+          ${item.total === 0 ? '-' : rate + '%'}
+        </td>
+        <td>
+          <button class="delete-word-btn" onclick="deleteSingleWord('${w}')">🗑️ 刪除</button>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  function sortVocabByMastery() {
+    vocabList.sort((a, b) => {
+      const rateA = vocabStats[a].total === 0 ? 0 : vocabStats[a].correct / vocabStats[a].total;
+      const rateB = vocabStats[b].total === 0 ? 0 : vocabStats[b].correct / vocabStats[b].total;
+      return rateA - rateB;
+    });
+    document.getElementById('raw-vocab-input').value = vocabList.join('\n');
+    localStorage.setItem(STORAGE_KEY_TEXT, vocabList.join('\n'));
+    showToast('✓ 英文單字已依熟練度由弱到強重新排序！', 'info');
+    initFlashcards(false);
+    renderStatsTable();
+    refreshWriteModeData();
+    scheduleCloudPush();
+  }
+
+  function updateProgress(ratio) {
+    document.getElementById('progress-fill').style.width = `${Math.min(100, Math.max(0, ratio * 100))}%`;
+  }
+
+  function bindEvents() {
+    window.addEventListener('keydown', e => {
+      const writeSection = document.getElementById('view-write');
+      if (!writeSection.classList.contains('hidden') && e.key === 'Enter') {
+        const nextBtn = document.getElementById('write-next-btn');
+        if (!nextBtn.classList.contains('hidden')) {
+          e.preventDefault();
+          nextWriteQuestion();
+          return;
+        }
+      }
+
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+      if (e.code === 'Space') { e.preventDefault(); flipCard(); }
+      if (e.code === 'ArrowRight') nextCard();
+      if (e.code === 'ArrowLeft') prevCard();
+      if (e.key === 'r' || e.key === 'R') speakCurrentFaceWord();
+    });
+
+    const fc = document.getElementById('fc-container');
+    let touchStartX = 0;
+    fc.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
+    fc.addEventListener('touchend', e => {
+      const diff = e.changedTouches[0].screenX - touchStartX;
+      if (Math.abs(diff) > 50) {
+        if (diff > 0) prevCard();
+        else nextCard();
+      }
+    }, {passive: true});
+  }
+
+  function switchView(mode) {
+    clearInterval(matchTimer);
+    document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+    const activeBtn = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.getAttribute('onclick').includes(mode));
+    if (activeBtn) activeBtn.classList.add('active');
+
+    document.getElementById(`view-${mode}`).classList.remove('hidden');
+
+    if (mode === 'flashcards') initFlashcards(true);
+    if (mode === 'learn') startLearnMode();
+    if (mode === 'write') startWriteMode();
+    if (mode === 'match') startMatchGame();
+    if (mode === 'search') document.getElementById('lookup-input').focus();
+  }
+
+  function handleFileImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(evt) {
+      showToast('正在解析匯入單字並建立 Google 翻譯索引...', 'info');
+      document.getElementById('raw-vocab-input').value = evt.target.result;
+      await syncVocabDatabase();
+      showToast('✓ 檔案匯入並自動完成 Google 翻譯索引！', 'success');
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  function exportVocab() {
+    const text = document.getElementById('raw-vocab-input').value;
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'my_english_vocab.txt';
+    a.click();
+    showToast('✓ 題庫檔案已成功匯出備份！', 'info');
+  }
+
+  function clearAllData() {
+    if (confirm('確定清空所有英文單字庫與學習數據嗎？此操作將同時重置雲端與本機。')) {
+      localStorage.clear();
+      vocabList = [];
+      vocabStats = {};
+      pushToCloud(false);
+      location.reload();
+    }
+  }
+</script>
+
+</body>
+</html>
