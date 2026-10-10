@@ -603,7 +603,7 @@
     <div class="cloud-card">
       <div>
         <h4 style="color: var(--primary); font-size: 1rem;">☁️ 手機／電腦跨裝置同步</h4>
-        <span style="font-size: 0.85rem; color: var(--text-sub);">防覆蓋聯集合併機制運作中</span>
+        <span style="font-size: 0.85rem; color: var(--text-sub);">支援中英文對照批次匯入，防覆蓋聯集合併機制運作中</span>
       </div>
       <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <button class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="pullFromCloud(true)">⬇️ 從雲端抓取並合併</button>
@@ -623,12 +623,14 @@
           <button class="btn btn-danger" style="padding: 0.35rem 0.6rem; font-size: 0.85rem;" onclick="clearAllData()">🗑️ 清空</button>
         </div>
       </div>
-      <p style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 0.4rem;">一行一個英文單字（貼上新單字點同步，新單字將自動置頂）：</p>
-      <textarea id="raw-vocab-input" class="sync-area" placeholder="ephemeral&#10;ubiquitous&#10;resilient&#10;scrutinize&#10;pragmatic"></textarea>
+      <p style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 0.4rem;">
+        每行可填「<b>單字</b>」或「<b>單字, 中文釋義</b>」（支援逗號、Tab、等號、冒號分隔；有中文者不會被 Google 覆蓋）：
+      </p>
+      <textarea id="raw-vocab-input" class="sync-area" placeholder="accommodate, 容納；提供住宿&#10;agenda	議程&#10;allocate = 分配；撥款&#10;comply: 遵守&#10;resilient"></textarea>
       
       <div id="sync-status" style="color: var(--primary); font-size: 0.85rem; margin-top: 0.4rem; min-height: 1.2rem;"></div>
       <div style="margin-top: 0.8rem; display: flex; gap: 0.4rem; flex-wrap: wrap;">
-        <button class="btn" style="flex: 1;" onclick="syncVocabDatabase()">同步 Google 翻譯建立索引</button>
+        <button class="btn" style="flex: 1;" onclick="syncVocabDatabase()">同步中英解析並建立索引</button>
         <button class="btn btn-secondary" style="flex: 1; background: var(--warning); color: #000;" onclick="sortVocabByMastery()">依熟練度重排</button>
       </div>
 
@@ -639,7 +641,7 @@
             <thead>
               <tr>
                 <th style="width: 25%;">英文單字 (點擊發音)</th>
-                <th style="width: 41%;">繁體中文釋義 (Google 翻譯/可修)</th>
+                <th style="width: 41%;">繁體中文釋義 (可直接修改)</th>
                 <th style="width: 10%;">次數</th>
                 <th style="width: 12%;">正確率</th>
                 <th style="width: 12%;">操作</th>
@@ -843,8 +845,52 @@
     cloudSyncTimeout = setTimeout(() => { pushToCloud(false); }, 2000);
   }
 
+  // --- 智慧文字行解析器（同時支援純英文單字、CSV逗點、Tab、等號、冒號）---
+  function parseLinesWithCustomMeaning(text) {
+    const lines = text.split('\n');
+    const result = [];
+    lines.forEach(line => {
+      let trimmed = line.trim();
+      if (!trimmed) return;
+
+      let word = '';
+      let customMeaning = '';
+
+      // 依序檢查常見分隔符號：Tab (\t)、逗號 (,)、等號 (=)、冒號 (:)
+      if (trimmed.includes('\t')) {
+        const parts = trimmed.split('\t');
+        word = parts[0].trim();
+        customMeaning = parts.slice(1).join('\t').trim();
+      } else if (trimmed.includes(',')) {
+        const parts = trimmed.split(',');
+        word = parts[0].trim();
+        customMeaning = parts.slice(1).join(',').trim();
+      } else if (trimmed.includes('=')) {
+        const parts = trimmed.split('=');
+        word = parts[0].trim();
+        customMeaning = parts.slice(1).join('=').trim();
+      } else if (trimmed.includes(':') || trimmed.includes('：')) {
+        const parts = trimmed.split(/[:：]/);
+        word = parts[0].trim();
+        customMeaning = parts.slice(1).join(':').trim();
+      } else {
+        word = trimmed;
+      }
+
+      word = word.toLowerCase().trim();
+      if (word) {
+        result.push({
+          word,
+          customMeaning: customMeaning ? toTraditionalChinese(customMeaning) : ''
+        });
+      }
+    });
+    return result;
+  }
+
   function parseTextToList(text) {
-    return [...new Set(text.split('\n').map(w => w.trim().toLowerCase()).filter(w => w.length > 0))];
+    const parsed = parseLinesWithCustomMeaning(text);
+    return [...new Set(parsed.map(item => item.word))];
   }
 
   function speakVoice(text, lang = 'en-US') {
@@ -1153,20 +1199,35 @@
     if (hasUpdate) scheduleCloudPush();
   }
 
-  // --- 核心更新：同步/匯入新單字自動置頂 ---
+  // --- 核心同步：支援「英文+中文」匯入且新單字置頂 ---
   async function syncVocabDatabase(importedRawText = null) {
     const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
-    const incomingList = parseTextToList(rawText);
+    const parsedItems = parseLinesWithCustomMeaning(rawText);
 
-    // 抓出原本題庫中「不存在」的全新單字
-    const brandNewWords = incomingList.filter(w => !vocabList.includes(w));
-    // 其餘原本就存在的單字保留原排序
-    const oldWords = vocabList.filter(w => incomingList.includes(w));
-    // 另外 incoming 裡面重複或刪除的調整
-    const otherIncomingExisting = incomingList.filter(w => vocabList.includes(w) && !oldWords.includes(w));
+    const brandNewWords = [];
+    const oldWords = [];
 
-    // 全新單字插在最前面 (置頂)
-    vocabList = [...brandNewWords, ...oldWords, ...otherIncomingExisting];
+    parsedItems.forEach(item => {
+      // 優先寫入自訂中文釋義（不被 Google 翻譯覆蓋）
+      if (item.customMeaning) {
+        if (!vocabStats[item.word]) {
+          vocabStats[item.word] = { meaning: item.customMeaning, correct: 0, total: 0 };
+        } else {
+          vocabStats[item.word].meaning = item.customMeaning;
+        }
+      }
+
+      if (!vocabList.includes(item.word)) {
+        if (!brandNewWords.includes(item.word)) brandNewWords.push(item.word);
+      } else {
+        if (!oldWords.includes(item.word)) oldWords.push(item.word);
+      }
+    });
+
+    const otherExisting = vocabList.filter(w => !brandNewWords.includes(w) && !oldWords.includes(w));
+
+    // 新加入單字置頂
+    vocabList = [...brandNewWords, ...oldWords, ...otherExisting];
 
     const newText = vocabList.join('\n');
     document.getElementById('raw-vocab-input').value = newText;
@@ -1239,7 +1300,7 @@
     return [...weakList, ...strongList];
   }
 
-  // --- 1. Flashcards (單字卡) ---
+  // --- 1. Flashcards ---
   function initFlashcards(shouldShuffle = true) {
     if (vocabList.length === 0) {
       flashcardQueue = [];
@@ -1398,7 +1459,7 @@
     });
   }
 
-  // --- 2. Learn (四選一反向模式) ---
+  // --- 2. Learn ---
   function startLearnMode() {
     if (vocabList.length < 4) {
       showToast('學習模式至少需要 4 個單字！', 'warning');
@@ -1798,28 +1859,32 @@
     if (mode === 'search') document.getElementById('lookup-input').focus();
   }
 
-  // 匯入檔案：新單字自動排在最上方置頂
   function handleFileImport(e) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async function(evt) {
-      showToast('正在解析匯入單字並建立 Google 翻譯索引...', 'info');
+      showToast('正在解析匯入單字與中文字詞...', 'info');
       await syncVocabDatabase(evt.target.result);
-      showToast('✓ 檔案匯入完成！新單字已置頂至最上方！', 'success');
+      showToast('✓ 檔案匯入完成！新單字與自訂釋義已置頂！', 'success');
     };
     reader.readAsText(file);
     e.target.value = '';
   }
 
   function exportVocab() {
-    const text = document.getElementById('raw-vocab-input').value;
+    // 匯出時一併導出單字與中文釋義（方便日後無損還原）
+    const lines = vocabList.map(w => {
+      const m = vocabStats[w] ? vocabStats[w].meaning : '';
+      return m ? `${w}, ${m}` : w;
+    });
+    const text = lines.join('\n');
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'my_english_vocab.txt';
     a.click();
-    showToast('✓ 題庫檔案已成功匯出備份！', 'info');
+    showToast('✓ 題庫檔案已成功匯出備份（包含自訂釋義）！', 'info');
   }
 
   function clearAllData() {
