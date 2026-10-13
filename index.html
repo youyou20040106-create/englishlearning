@@ -751,7 +751,7 @@
 <script>
   // 認證金鑰設定（Master Key 與 Access Key 雙向支援）
   const CLOUD_MASTER_KEY = '$2a$10$QlqWn3T/df0qMYBtYokJVuNQLieKy.fOW97gM0pX/b/yC/NlVXBQe';
-  const CLOUD_ACCESS_KEY = '$2a$10$BQiPvUFsFgh31CaR..ukzuBMHEsXjajVNtrtvu72je8.spE6JTvke';
+
 
   // 四大全新分流 Bin ID
   const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // review: 題目加強複習專用
@@ -961,7 +961,7 @@
     return {
       'Content-Type': 'application/json',
       'X-Master-Key': CLOUD_MASTER_KEY,
-      'X-Access-Key': CLOUD_ACCESS_KEY
+
     };
   }
 
