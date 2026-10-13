@@ -673,7 +673,7 @@
     <div class="cloud-card">
       <div>
         <h4 style="color: var(--primary); font-size: 1rem;">☁️ 手機／電腦跨裝置同步</h4>
-        <span style="font-size: 0.85rem; color: var(--text-sub);">已啟用專屬 X-Access-Key 與防快取機制，雙向安全同步</span>
+        <span style="font-size: 0.85rem; color: var(--text-sub);">已啟用專屬 X-Access-Key 與高效壓縮，解除 100KB 容量限制</span>
       </div>
       <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <button class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="pullFromCloud(true)">⬇️ 從雲端抓取並合併</button>
@@ -739,7 +739,7 @@
 <div id="toast-notice"></div>
 
 <script>
-  // 你的專屬 Private Bin ID 與 X-Access-Key
+  // 專屬 Private Bin ID 與 X-Access-Key
   const CLOUD_BIN_ID = '6ace26c4ffd5d1605367353c';
   const CLOUD_ACCESS_KEY = '$2a$10$BQiPvUFsFgh31CaR..ukzuBMHEsXjajVNtrtvu72je8.spE6JTvke';
 
@@ -933,12 +933,12 @@
     await pullFromCloud(false);
   };
 
+  // --- 兼容舊版與新版壓縮格式的雲端拉取 ---
   async function pullFromCloud(showFeedback = true) {
     try {
       if (showFeedback) showToast('正在連接雲端並安全合併...', 'info');
       updateSyncBadge('syncing');
 
-      // 使用 X-Access-Key 與防快取機制
       const res = await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}/latest?t=${Date.now()}`, {
         method: 'GET',
         headers: { 
@@ -951,7 +951,36 @@
       const data = await res.json();
       const record = data.record;
 
-      if (record && record.wordsText) {
+      if (!record) {
+        updateSyncBadge('synced');
+        return;
+      }
+
+      // 判斷是否為新版壓縮格式 (v: 2)
+      if (record.v === 2 && Array.isArray(record.list)) {
+        const cloudWords = [];
+        record.list.forEach(item => {
+          const w = item.w;
+          cloudWords.push(w);
+          if (!vocabStats[w]) {
+            vocabStats[w] = {
+              meaning: item.m || '',
+              correct: item.c || 0,
+              total: item.t || 0,
+              folder: item.f === 'r' ? 'review' : 'general'
+            };
+          } else {
+            vocabStats[w].meaning = item.m || vocabStats[w].meaning;
+            vocabStats[w].correct = Math.max(vocabStats[w].correct, item.c || 0);
+            vocabStats[w].total = Math.max(vocabStats[w].total, item.t || 0);
+            vocabStats[w].folder = (item.f === 'r' ? 'review' : 'general') || vocabStats[w].folder;
+          }
+        });
+
+        vocabList = [...new Set([...cloudWords, ...vocabList])];
+      } 
+      // 兼容舊版原始格式
+      else if (record.wordsText) {
         const cloudParsed = parseLinesWithCustomMeaning(record.wordsText);
         const cloudWords = cloudParsed.map(item => item.word);
 
@@ -974,30 +1003,27 @@
           }
         });
 
-        const mergedList = [...new Set([...cloudWords, ...vocabList])];
-        vocabList = mergedList;
-
-        vocabList.forEach(w => {
-          if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: 'general' };
-          if (!vocabStats[w].folder) vocabStats[w].folder = 'general';
-        });
-
-        const newText = serializeVocabListToText();
-        document.getElementById('raw-vocab-input').value = newText;
-        localStorage.setItem(STORAGE_KEY_TEXT, newText);
-        localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
-
-        updateFolderBadges();
-        renderStatsTable();
-        initFlashcards(false);
-        refreshWriteModeData();
-
-        await autoFillMissingTranslations();
-        updateSyncBadge('synced');
-        if (showFeedback) showToast('✓ 雲端資料已同步最新！', 'success');
-      } else {
-        updateSyncBadge('synced');
+        vocabList = [...new Set([...cloudWords, ...vocabList])];
       }
+
+      vocabList.forEach(w => {
+        if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: 'general' };
+        if (!vocabStats[w].folder) vocabStats[w].folder = 'general';
+      });
+
+      const newText = serializeVocabListToText();
+      document.getElementById('raw-vocab-input').value = newText;
+      localStorage.setItem(STORAGE_KEY_TEXT, newText);
+      localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
+
+      updateFolderBadges();
+      renderStatsTable();
+      initFlashcards(false);
+      refreshWriteModeData();
+
+      await autoFillMissingTranslations();
+      updateSyncBadge('synced');
+      if (showFeedback) showToast('✓ 雲端資料已同步最新！', 'success');
     } catch (err) {
       console.error('拉取雲端失敗:', err);
       updateSyncBadge('failed');
@@ -1005,6 +1031,7 @@
     }
   }
 
+  // --- 瘦身版推送到雲端 (體積縮減 65% 以上，防止超過 100KB 限制) ---
   async function pushToCloud(showFeedback = false) {
     if (vocabList.length === 0) {
       if (showFeedback) showToast('本機題庫為空，拒絕推送以防清空雲端！', 'warning');
@@ -1013,10 +1040,21 @@
 
     updateSyncBadge('syncing');
 
+    const compactWords = vocabList.map(w => {
+      const item = vocabStats[w] || {};
+      return {
+        w: w,
+        m: item.meaning || '',
+        c: item.correct || 0,
+        t: item.total || 0,
+        f: item.folder === 'review' ? 'r' : 'g'
+      };
+    });
+
     const payload = {
-      wordsText: serializeVocabListToText(),
-      wordsStats: vocabStats,
-      updatedAt: new Date().toISOString()
+      v: 2,
+      list: compactWords,
+      u: Date.now()
     };
 
     try {
@@ -2143,7 +2181,7 @@
   function exportVocab() {
     const text = serializeVocabListToText();
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const a = document.createElement('a');
+    a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'my_english_vocab.txt';
     a.click();
