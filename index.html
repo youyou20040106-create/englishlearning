@@ -88,7 +88,41 @@
 
     .header-tools { display: flex; align-items: center; gap: 0.3rem; }
 
-    main { flex: 1; max-width: 880px; width: 100%; margin: 1rem auto; padding: 0 0.8rem; }
+    /* 資料夾切換列 */
+    .folder-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--card-bg);
+      padding: 0.5rem 0.8rem;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .folder-bar::-webkit-scrollbar { display: none; }
+    .folder-tab {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: var(--bg);
+      color: var(--text-sub);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .folder-tab:hover { border-color: var(--primary); color: var(--primary); }
+    .folder-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    body.dark-mode .folder-tab.active { color: #121212; }
+    .folder-count-badge { font-size: 0.75rem; padding: 0.1rem 0.4rem; border-radius: 10px; background: rgba(0,0,0,0.12); }
+    .folder-tab.active .folder-count-badge { background: rgba(255,255,255,0.3); }
+    body.dark-mode .folder-tab.active .folder-count-badge { background: rgba(0,0,0,0.25); }
+
+    main { flex: 1; max-width: 880px; width: 100%; margin: 0.8rem auto 1.5rem auto; padding: 0 0.8rem; }
     .hidden { display: none !important; }
 
     .btn {
@@ -252,6 +286,8 @@
       align-items: center;
       margin-top: auto;
       padding-top: 0.8rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
     }
     .g-actions { display: flex; gap: 0.4rem; }
     .icon-btn {
@@ -428,17 +464,27 @@
     .match-tile.matched { opacity: 0; pointer-events: none; transform: scale(0.8); }
 
     .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 1rem; }
-    .stat-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    .stat-table { width: 100%; border-collapse: collapse; min-width: 650px; }
     .stat-table th, .stat-table td { padding: 0.5rem; border: 1px solid var(--border); text-align: center; font-size: 0.85rem; }
     .stat-table th { background: rgba(0,0,0,0.03); }
     .word-cell { display: flex; align-items: center; justify-content: center; gap: 0.35rem; }
     .speak-inline-btn { background: transparent; border: none; cursor: pointer; font-size: 0.95rem; color: var(--primary); padding: 2px; border-radius: 4px; }
     .speak-inline-btn:hover { background: var(--chip-bg); }
-    .edit-meaning-input { width: 70%; padding: 0.3rem 0.4rem; border: 1px solid var(--border); border-radius: 4px; font-size: 0.85rem; text-align: center; background: transparent; color: var(--text-main); }
+    .edit-meaning-input { width: 68%; padding: 0.3rem 0.4rem; border: 1px solid var(--border); border-radius: 4px; font-size: 0.85rem; text-align: center; background: transparent; color: var(--text-main); }
     .edit-save-btn { padding: 0.3rem 0.5rem; font-size: 0.75rem; border-radius: 4px; margin-left: 3px; cursor: pointer; background: var(--primary); color: #fff; border: none; }
     body.dark-mode .edit-save-btn { color: #121212; }
     .delete-word-btn { padding: 0.3rem 0.55rem; font-size: 0.75rem; border-radius: 4px; cursor: pointer; background: rgba(217,48,37,0.12); color: var(--danger); border: 1px solid rgba(217,48,37,0.3); font-weight: 600; }
     .delete-word-btn:hover { background: rgba(217,48,37,0.25); }
+
+    .folder-select-inline {
+      padding: 0.25rem 0.4rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text-main);
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
 
     .progress-bar-container { background: var(--border); border-radius: 10px; height: 6px; width: 100%; overflow: hidden; margin-bottom: 0.8rem; }
     .progress-bar-fill { background: var(--primary); height: 100%; width: 0%; transition: width 0.3s ease; }
@@ -474,6 +520,20 @@
     <button class="icon-btn" id="sound-toggle-btn" title="切換音效" onclick="toggleSound()">🔔</button>
   </div>
 </header>
+
+<!-- 資料夾分類選擇列 -->
+<div class="folder-bar">
+  <span style="font-size: 0.8rem; color: var(--text-sub); font-weight: 700; white-space: nowrap;">📁 分類庫：</span>
+  <button class="folder-tab active" id="tab-folder-all" onclick="selectFolder('all')">
+    全部單字 <span class="folder-count-badge" id="badge-count-all">0</span>
+  </button>
+  <button class="folder-tab" id="tab-folder-review" onclick="selectFolder('review')">
+    📝 題目加強複習 <span class="folder-count-badge" id="badge-count-review">0</span>
+  </button>
+  <button class="folder-tab" id="tab-folder-general" onclick="selectFolder('general')">
+    📚 高頻詞庫精選 <span class="folder-count-badge" id="badge-count-general">0</span>
+  </button>
+</div>
 
 <main>
   <div class="progress-bar-container">
@@ -511,7 +571,13 @@
               <button class="icon-btn" title="朗讀翻譯結果" onclick="speakResultContent()">🔊</button>
               <button class="icon-btn" title="複製結果" onclick="copyTranslation()">📋</button>
             </div>
-            <button id="add-to-vocab-btn" class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="addSearchedWordToVocab()" disabled>➕ 加到單字庫</button>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <select id="search-target-folder" class="folder-select-inline" title="存入指定資料夾">
+                <option value="review">存入：📝 題目加強複習</option>
+                <option value="general" selected>存入：📚 高頻詞庫精選</option>
+              </select>
+              <button id="add-to-vocab-btn" class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="addSearchedWordToVocab()" disabled>➕ 加到單字庫</button>
+            </div>
           </div>
         </div>
       </div>
@@ -606,7 +672,7 @@
     <div class="cloud-card">
       <div>
         <h4 style="color: var(--primary); font-size: 1rem;">☁️ 手機／電腦跨裝置同步</h4>
-        <span style="font-size: 0.85rem; color: var(--text-sub);">新增、修改或匯入單字將自動推送到雲端備份</span>
+        <span style="font-size: 0.85rem; color: var(--text-sub);">已啟用防快取同步機制，單字庫與資料夾設定即時傳遞</span>
       </div>
       <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <button class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="pullFromCloud(true)">⬇️ 從雲端抓取並合併</button>
@@ -626,6 +692,13 @@
           <button class="btn btn-danger" style="padding: 0.35rem 0.6rem; font-size: 0.85rem;" onclick="clearAllData()">🗑️ 清空</button>
         </div>
       </div>
+      <div style="margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+        <span style="font-size: 0.85rem; color: var(--text-sub);">批次匯入歸屬資料夾：</span>
+        <select id="batch-import-folder" class="folder-select-inline">
+          <option value="review">📝 題目加強複習</option>
+          <option value="general" selected>📚 高頻詞庫精選</option>
+        </select>
+      </div>
       <p style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 0.4rem;">
         每行可填「<b>單字</b>」或「<b>單字, 中文釋義</b>」（支援逗號、Tab、等號、冒號分隔；有中文者不會被 Google 覆蓋）：
       </p>
@@ -638,16 +711,20 @@
       </div>
 
       <div style="margin-top: 1.5rem;">
-        <h4 style="font-size: 1rem;">📊 學習統計 (最新加入自動置頂最上方)</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <h4 style="font-size: 1rem;">📊 學習統計 (依當前分類篩選)</h4>
+          <span style="font-size: 0.8rem; color: var(--text-sub);">可在表格中直接更換所屬資料夾</span>
+        </div>
         <div class="table-responsive">
           <table class="stat-table">
             <thead>
               <tr>
-                <th style="width: 25%;">英文單字 (點擊發音)</th>
-                <th style="width: 41%;">繁體中文釋義 (可直接修改)</th>
-                <th style="width: 10%;">次數</th>
-                <th style="width: 12%;">正確率</th>
-                <th style="width: 12%;">操作</th>
+                <th style="width: 22%;">英文單字 (發音)</th>
+                <th style="width: 35%;">繁體中文釋義 (可修改)</th>
+                <th style="width: 17%;">分類庫</th>
+                <th style="width: 8%;">次數</th>
+                <th style="width: 8%;">正確率</th>
+                <th style="width: 10%;">操作</th>
               </tr>
             </thead>
             <tbody id="stat-table-body"></tbody>
@@ -669,6 +746,7 @@
   const STORAGE_KEY_MATCH_BEST = 'quizlet_match_best';
   const STORAGE_KEY_THEME = 'quizlet_theme';
   const STORAGE_KEY_SOUND = 'quizlet_sound';
+  const STORAGE_KEY_ACTIVE_FOLDER = 'quizlet_active_folder';
 
   let vocabList = [];
   let flashcardQueue = [];
@@ -678,6 +756,9 @@
   let cardOrientation = 'en-first';
   let isAutoSpeechOn = false;
   let isSoundEnabled = true;
+
+  // 資料夾狀態：'all' | 'review' | 'general'
+  let currentFolder = 'all';
 
   let matchTimer = null, matchStartTime = 0, selectedTile = null, matchedPairsCount = 0;
   let learnQueue = [], currentLearnIndex = 0, canChooseLearn = true, learnDirection = 'zh2en';
@@ -754,6 +835,10 @@
       isSoundEnabled = false;
       document.getElementById('sound-toggle-btn').textContent = '🔕';
     }
+    const savedFolder = localStorage.getItem(STORAGE_KEY_ACTIVE_FOLDER);
+    if (savedFolder && ['all', 'review', 'general'].includes(savedFolder)) {
+      currentFolder = savedFolder;
+    }
   }
 
   function toggleDarkMode() {
@@ -769,6 +854,59 @@
     showToast(isSoundEnabled ? '音效已開啟' : '音效已靜音', 'info');
   }
 
+  // --- 資料夾切換與篩選機制 ---
+  function selectFolder(folderKey) {
+    currentFolder = folderKey;
+    localStorage.setItem(STORAGE_KEY_ACTIVE_FOLDER, folderKey);
+
+    document.querySelectorAll('.folder-tab').forEach(tab => tab.classList.remove('active'));
+    const activeTab = document.getElementById(`tab-folder-${folderKey}`);
+    if (activeTab) activeTab.classList.add('active');
+
+    updateFolderBadges();
+    initFlashcards(true);
+    renderStatsTable();
+    refreshWriteModeData();
+
+    const folderNames = { all: '全部單字', review: '📝 題目加強複習', general: '📚 高頻詞庫精選' };
+    showToast(`切換至：${folderNames[folderKey]}`, 'info');
+  }
+
+  function getFilteredVocabList() {
+    if (currentFolder === 'all') return vocabList;
+    return vocabList.filter(w => {
+      const f = vocabStats[w]?.folder || 'general';
+      return f === currentFolder;
+    });
+  }
+
+  function updateFolderBadges() {
+    const totalCount = vocabList.length;
+    let reviewCount = 0;
+    let generalCount = 0;
+
+    vocabList.forEach(w => {
+      const f = vocabStats[w]?.folder || 'general';
+      if (f === 'review') reviewCount++;
+      else generalCount++;
+    });
+
+    document.getElementById('badge-count-all').textContent = totalCount;
+    document.getElementById('badge-count-review').textContent = reviewCount;
+    document.getElementById('badge-count-general').textContent = generalCount;
+  }
+
+  function changeWordFolder(word, newFolder) {
+    if (!vocabStats[word]) return;
+    vocabStats[word].folder = newFolder;
+    localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
+    updateFolderBadges();
+    renderStatsTable();
+    initFlashcards(false);
+    showToast(`已移動「${word}」`, 'info');
+    pushToCloud(false);
+  }
+
   window.onload = async function() {
     initPreferences();
     const savedText = localStorage.getItem(STORAGE_KEY_TEXT);
@@ -781,8 +919,13 @@
       vocabList = [];
     }
 
-    renderStatsTable();
-    initFlashcards(true);
+    // 確保所有單字都有預設資料夾 (預設為 general)
+    vocabList.forEach(w => {
+      if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: 'general' };
+      if (!vocabStats[w].folder) vocabStats[w].folder = 'general';
+    });
+
+    selectFolder(currentFolder);
     bindEvents();
     initTinderGestures();
 
@@ -794,8 +937,14 @@
       if (showFeedback) showToast('正在連接雲端並安全合併...', 'info');
       updateSyncBadge('syncing');
 
-      const res = await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}/latest`, {
-        headers: { 'X-Master-Key': CLOUD_MASTER_KEY }
+      // 防快取機制：時間戳 + no-store + no-cache
+      const res = await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}/latest?t=${Date.now()}`, {
+        method: 'GET',
+        headers: { 
+          'X-Master-Key': CLOUD_MASTER_KEY,
+          'Cache-Control': 'no-cache'
+        },
+        cache: 'no-store'
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
@@ -810,30 +959,42 @@
             if (!vocabStats[w]) {
               vocabStats[w] = record.wordsStats[w];
             } else {
-              vocabStats[w].meaning = vocabStats[w].meaning || record.wordsStats[w].meaning;
+              vocabStats[w].meaning = record.wordsStats[w].meaning || vocabStats[w].meaning;
               vocabStats[w].total = Math.max(vocabStats[w].total, record.wordsStats[w].total);
               vocabStats[w].correct = Math.max(vocabStats[w].correct, record.wordsStats[w].correct);
+              vocabStats[w].folder = record.wordsStats[w].folder || vocabStats[w].folder || 'general';
             }
           }
         }
 
         cloudParsed.forEach(item => {
-          if (item.customMeaning && vocabStats[item.word] && !vocabStats[item.word].meaning) {
-            vocabStats[item.word].meaning = item.customMeaning;
+          if (item.customMeaning && (!vocabStats[item.word] || !vocabStats[item.word].meaning)) {
+            vocabStats[item.word] = { meaning: item.customMeaning, correct: 0, total: 0, folder: 'general' };
           }
         });
 
-        const mergedList = [...new Set([...vocabList, ...cloudWords])];
+        // 雲端單字與本機聯集合併
+        const mergedList = [...new Set([...cloudWords, ...vocabList])];
         vocabList = mergedList;
+
+        vocabList.forEach(w => {
+          if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: 'general' };
+          if (!vocabStats[w].folder) vocabStats[w].folder = 'general';
+        });
 
         const newText = serializeVocabListToText();
         document.getElementById('raw-vocab-input').value = newText;
         localStorage.setItem(STORAGE_KEY_TEXT, newText);
         localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
 
+        updateFolderBadges();
+        renderStatsTable();
+        initFlashcards(false);
+        refreshWriteModeData();
+
         await autoFillMissingTranslations();
         updateSyncBadge('synced');
-        if (showFeedback) showToast('✓ 雲端資料已安全合併完畢！', 'success');
+        if (showFeedback) showToast('✓ 雲端資料已同步最新！', 'success');
       } else {
         updateSyncBadge('synced');
       }
@@ -876,14 +1037,6 @@
       updateSyncBadge('failed');
       if (showFeedback) showToast('推送到雲端失敗', 'warning');
     }
-  }
-
-  function scheduleCloudPush() {
-    clearTimeout(cloudSyncTimeout);
-    updateSyncBadge('syncing');
-    cloudSyncTimeout = setTimeout(async () => {
-      await pushToCloud(false);
-    }, 1200);
   }
 
   function serializeVocabListToText() {
@@ -1177,10 +1330,11 @@
     });
   }
 
-  // --- 新增單字：置頂並即時推送到雲端 ---
+  // --- 查單字加到指定資料夾 ---
   async function addSearchedWordToVocab() {
     if (!currentSearchedWord || selectedMeanings.length === 0) return;
 
+    const chosenFolder = document.getElementById('search-target-folder').value || 'general';
     const finalMeaning = selectedMeanings.join('；');
 
     if (vocabList.includes(currentSearchedWord)) {
@@ -1188,36 +1342,39 @@
         const exist = vocabStats[currentSearchedWord].meaning;
         if (!exist.includes(finalMeaning)) {
           vocabStats[currentSearchedWord].meaning = `${exist}；${finalMeaning}`;
-          vocabList = [currentSearchedWord, ...vocabList.filter(w => w !== currentSearchedWord)];
-          const newText = serializeVocabListToText();
-          document.getElementById('raw-vocab-input').value = newText;
-          localStorage.setItem(STORAGE_KEY_TEXT, newText);
-          localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
-
-          renderStatsTable();
-          initFlashcards(false);
-          refreshWriteModeData();
-          showToast(`✓ 已為「${currentSearchedWord}」擴充新釋義並同步至雲端！`, 'success');
-          await pushToCloud(false);
-          return;
         }
+        vocabStats[currentSearchedWord].folder = chosenFolder;
+        vocabList = [currentSearchedWord, ...vocabList.filter(w => w !== currentSearchedWord)];
+        const newText = serializeVocabListToText();
+        document.getElementById('raw-vocab-input').value = newText;
+        localStorage.setItem(STORAGE_KEY_TEXT, newText);
+        localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
+
+        updateFolderBadges();
+        renderStatsTable();
+        initFlashcards(false);
+        refreshWriteModeData();
+        showToast(`✓ 「${currentSearchedWord}」已更新並移至指定資料夾！`, 'success');
+        await pushToCloud(false);
+        return;
       }
       showToast(`「${currentSearchedWord}」已存在於單字庫中`, 'warning');
       return;
     }
 
     vocabList.unshift(currentSearchedWord);
-    vocabStats[currentSearchedWord] = { meaning: finalMeaning, correct: 0, total: 0 };
+    vocabStats[currentSearchedWord] = { meaning: finalMeaning, correct: 0, total: 0, folder: chosenFolder };
 
     const newText = serializeVocabListToText();
     document.getElementById('raw-vocab-input').value = newText;
     localStorage.setItem(STORAGE_KEY_TEXT, newText);
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
 
+    updateFolderBadges();
     renderStatsTable();
     initFlashcards(true);
     refreshWriteModeData();
-    showToast(`✓ 已加入「${currentSearchedWord}」並自動同步到雲端！`, 'success');
+    showToast(`✓ 已加入「${currentSearchedWord}」至指定資料夾！`, 'success');
     await pushToCloud(false);
   }
 
@@ -1233,7 +1390,8 @@
         vocabStats[w] = { 
           meaning: primary || '（暫無釋義）', 
           correct: (vocabStats[w] ? vocabStats[w].correct : 0), 
-          total: (vocabStats[w] ? vocabStats[w].total : 0) 
+          total: (vocabStats[w] ? vocabStats[w].total : 0),
+          folder: (vocabStats[w]?.folder || 'general')
         };
         hasUpdate = true;
       }
@@ -1247,6 +1405,7 @@
     localStorage.setItem(STORAGE_KEY_TEXT, newText);
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
 
+    updateFolderBadges();
     renderStatsTable();
     initFlashcards(false);
     refreshWriteModeData();
@@ -1254,9 +1413,9 @@
     if (hasUpdate) await pushToCloud(false);
   }
 
-  // --- 題庫管理：同步完成後自動推送到雲端 ---
   async function syncVocabDatabase(importedRawText = null) {
     const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
+    const batchFolder = document.getElementById('batch-import-folder').value || 'general';
     const parsedItems = parseLinesWithCustomMeaning(rawText);
 
     const brandNewWords = [];
@@ -1265,7 +1424,7 @@
     parsedItems.forEach(item => {
       if (item.customMeaning) {
         if (!vocabStats[item.word]) {
-          vocabStats[item.word] = { meaning: item.customMeaning, correct: 0, total: 0 };
+          vocabStats[item.word] = { meaning: item.customMeaning, correct: 0, total: 0, folder: batchFolder };
         } else {
           vocabStats[item.word].meaning = item.customMeaning;
         }
@@ -1281,10 +1440,16 @@
     const otherExisting = vocabList.filter(w => !brandNewWords.includes(w) && !oldWords.includes(w));
     vocabList = [...brandNewWords, ...oldWords, ...otherExisting];
 
+    vocabList.forEach(w => {
+      if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: batchFolder };
+      if (!vocabStats[w].folder) vocabStats[w].folder = batchFolder;
+    });
+
     const newText = serializeVocabListToText();
     document.getElementById('raw-vocab-input').value = newText;
     localStorage.setItem(STORAGE_KEY_TEXT, newText);
 
+    updateFolderBadges();
     await autoFillMissingTranslations();
     await pushToCloud(false);
     showToast('✓ 單字庫與雲端備份已同步完成！', 'success');
@@ -1300,7 +1465,7 @@
     }
 
     if (!vocabStats[word]) {
-      vocabStats[word] = { meaning: newMeaning, correct: 0, total: 0 };
+      vocabStats[word] = { meaning: newMeaning, correct: 0, total: 0, folder: 'general' };
     } else {
       vocabStats[word].meaning = newMeaning;
     }
@@ -1356,6 +1521,7 @@
     localStorage.setItem(STORAGE_KEY_TEXT, newText);
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
 
+    updateFolderBadges();
     renderStatsTable();
     initFlashcards(true);
     refreshWriteModeData();
@@ -1369,10 +1535,11 @@
   }
 
   function buildWeaknessPrioritizedQueue() {
+    const list = getFilteredVocabList();
     const weakList = [];
     const strongList = [];
 
-    vocabList.forEach(w => {
+    list.forEach(w => {
       const acc = getWordAccuracy(w);
       if (acc < 50) {
         weakList.push(w);
@@ -1388,17 +1555,18 @@
   }
 
   function initFlashcards(shouldShuffle = true) {
-    if (vocabList.length === 0) {
+    const list = getFilteredVocabList();
+    if (list.length === 0) {
       flashcardQueue = [];
-      document.getElementById('fc-front-text').textContent = '尚無單字';
-      document.getElementById('fc-back-text').textContent = '請至題庫管理添加';
+      document.getElementById('fc-front-text').textContent = '此分類尚無單字';
+      document.getElementById('fc-back-text').textContent = '請至題庫管理添加或更換分類';
       document.getElementById('fc-counter').textContent = '0 / 0';
       document.getElementById('fc-weak-tag').classList.add('hidden');
       updateProgress(0);
       return;
     }
 
-    if (shouldShuffle || flashcardQueue.length !== vocabList.length) {
+    if (shouldShuffle || flashcardQueue.length !== list.length) {
       flashcardQueue = buildWeaknessPrioritizedQueue();
     }
 
@@ -1407,7 +1575,8 @@
   }
 
   function shuffleFlashcards() {
-    if (vocabList.length <= 1) {
+    const list = getFilteredVocabList();
+    if (list.length <= 1) {
       showToast('單字量不足，無法洗牌', 'info');
       return;
     }
@@ -1546,9 +1715,9 @@
   }
 
   function startLearnMode() {
-    if (vocabList.length < 4) {
-      showToast('學習模式至少需要 4 個單字！', 'warning');
-      switchView('manage');
+    const list = getFilteredVocabList();
+    if (list.length < 4) {
+      showToast('此分類至少需要 4 個單字方可進行學習模式！', 'warning');
       return;
     }
     learnQueue = buildWeaknessPrioritizedQueue();
@@ -1586,7 +1755,8 @@
       weakTag.classList.add('hidden');
     }
 
-    const distractors = vocabList.filter(w => w !== targetWord).sort(() => Math.random() - 0.5).slice(0, 3);
+    const currentPool = getFilteredVocabList();
+    const distractors = currentPool.filter(w => w !== targetWord).sort(() => Math.random() - 0.5).slice(0, 3);
     const rawOptions = [targetWord, ...distractors].sort(() => Math.random() - 0.5);
 
     const container = document.getElementById('learn-options');
@@ -1637,9 +1807,9 @@
   }
 
   function startWriteMode() {
-    if (vocabList.length === 0) {
-      showToast('請先在題庫管理新增單字！', 'warning');
-      switchView('manage');
+    const list = getFilteredVocabList();
+    if (list.length === 0) {
+      showToast('此分類尚無單字！', 'warning');
       return;
     }
     writeQueue = buildWeaknessPrioritizedQueue();
@@ -1767,9 +1937,9 @@
     clearInterval(matchTimer);
     document.getElementById('match-best').textContent = localStorage.getItem(STORAGE_KEY_MATCH_BEST) ? `${localStorage.getItem(STORAGE_KEY_MATCH_BEST)}s` : '無';
     
-    if (vocabList.length < 2) {
-      showToast('配對遊戲至少需要 2 組單字！', 'warning');
-      switchView('manage');
+    const list = getFilteredVocabList();
+    if (list.length < 2) {
+      showToast('此分類至少需要 2 組單字方可進行配對遊戲！', 'warning');
       return;
     }
 
@@ -1815,7 +1985,8 @@
         matchedPairsCount++;
         selectedTile = null;
 
-        if (matchedPairsCount >= 6 || matchedPairsCount === Math.min(vocabList.length, 6)) {
+        const currentPool = getFilteredVocabList();
+        if (matchedPairsCount >= 6 || matchedPairsCount === Math.min(currentPool.length, 6)) {
           clearInterval(matchTimer);
           const finalScore = ((Date.now() - matchStartTime) / 1000).toFixed(1);
           const best = localStorage.getItem(STORAGE_KEY_MATCH_BEST);
@@ -1846,20 +2017,22 @@
       if (isCorrect) vocabStats[word].correct += 1;
       localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
       renderStatsTable();
-      scheduleCloudPush();
+      pushToCloud(false);
     }
   }
 
   function renderStatsTable() {
     const tbody = document.getElementById('stat-table-body');
     tbody.innerHTML = '';
-    if (vocabList.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-sub); padding:1rem;">目前英文單字庫為空</td></tr>';
+    const displayList = getFilteredVocabList();
+
+    if (displayList.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-sub); padding:1rem;">此分類庫目前無單字</td></tr>';
       return;
     }
 
-    vocabList.forEach(w => {
-      const item = vocabStats[w] || { meaning: '...', correct: 0, total: 0 };
+    displayList.forEach(w => {
+      const item = vocabStats[w] || { meaning: '...', correct: 0, total: 0, folder: 'general' };
       const rate = item.total === 0 ? 0 : Math.round((item.correct / item.total) * 100);
       const row = document.createElement('tr');
       row.innerHTML = `
@@ -1872,6 +2045,12 @@
         <td>
           <input type="text" id="edit-meaning-${w}" class="edit-meaning-input" value="${item.meaning}">
           <button class="edit-save-btn" onclick="saveEditedMeaning('${w}')">儲存</button>
+        </td>
+        <td>
+          <select class="folder-select-inline" onchange="changeWordFolder('${w}', this.value)">
+            <option value="review" ${item.folder === 'review' ? 'selected' : ''}>📝 題目複習</option>
+            <option value="general" ${item.folder !== 'review' ? 'selected' : ''}>📚 高頻詞庫</option>
+          </select>
         </td>
         <td>${item.total}</td>
         <td style="color:${rate < 60 ? 'var(--danger)' : 'var(--success)'}; font-weight:bold;">
@@ -1898,7 +2077,7 @@
     initFlashcards(false);
     renderStatsTable();
     refreshWriteModeData();
-    scheduleCloudPush();
+    pushToCloud(false);
   }
 
   function updateProgress(ratio) {
@@ -1917,7 +2096,7 @@
         }
       }
 
-      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
       if (e.code === 'Space') { e.preventDefault(); flipCard(); }
       if (e.code === 'ArrowRight') nextCard();
       if (e.code === 'ArrowLeft') prevCard();
