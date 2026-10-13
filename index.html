@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Quizlet 隨身旗艦版</title>
@@ -672,7 +673,7 @@
     <div class="cloud-card">
       <div>
         <h4 style="color: var(--primary); font-size: 1rem;">☁️ 手機／電腦跨裝置同步</h4>
-        <span style="font-size: 0.85rem; color: var(--text-sub);">已啟用防快取同步機制，單字庫與資料夾設定即時傳遞</span>
+        <span style="font-size: 0.85rem; color: var(--text-sub);">已啟用專屬 X-Access-Key 與防快取機制，雙向安全同步</span>
       </div>
       <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <button class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="pullFromCloud(true)">⬇️ 從雲端抓取並合併</button>
@@ -738,8 +739,9 @@
 <div id="toast-notice"></div>
 
 <script>
+  // 你的專屬 Private Bin ID 與 X-Access-Key
   const CLOUD_BIN_ID = '6ace26c4ffd5d1605367353c';
-  const CLOUD_MASTER_KEY = '$2a$10$QlqWn3T/df0qMYBtYokJVuNQLieKy.fOW97gM0pX/b/yC/NlVXBQe';
+  const CLOUD_ACCESS_KEY = '$2a$10$BQiPvUFsFgh31CaR..ukzuBMHEsXjajVNtrtvu72je8.spE6JTvke';
 
   const STORAGE_KEY_TEXT = 'quizlet_words_text';
   const STORAGE_KEY_STATS = 'quizlet_words_stats';
@@ -919,7 +921,6 @@
       vocabList = [];
     }
 
-    // 確保所有單字都有預設資料夾 (預設為 general)
     vocabList.forEach(w => {
       if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: 'general' };
       if (!vocabStats[w].folder) vocabStats[w].folder = 'general';
@@ -937,16 +938,16 @@
       if (showFeedback) showToast('正在連接雲端並安全合併...', 'info');
       updateSyncBadge('syncing');
 
-      // 防快取機制：時間戳 + no-store + no-cache
+      // 使用 X-Access-Key 與防快取機制
       const res = await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}/latest?t=${Date.now()}`, {
         method: 'GET',
         headers: { 
-          'X-Master-Key': CLOUD_MASTER_KEY,
+          'X-Access-Key': CLOUD_ACCESS_KEY,
           'Cache-Control': 'no-cache'
         },
         cache: 'no-store'
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const record = data.record;
 
@@ -973,7 +974,6 @@
           }
         });
 
-        // 雲端單字與本機聯集合併
         const mergedList = [...new Set([...cloudWords, ...vocabList])];
         vocabList = mergedList;
 
@@ -998,7 +998,8 @@
       } else {
         updateSyncBadge('synced');
       }
-    } catch {
+    } catch (err) {
+      console.error('拉取雲端失敗:', err);
       updateSyncBadge('failed');
       if (showFeedback) showToast('無法連接雲端，維持目前本機題庫', 'warning');
     }
@@ -1023,17 +1024,23 @@
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-Master-Key': CLOUD_MASTER_KEY
+          'X-Access-Key': CLOUD_ACCESS_KEY
         },
         body: JSON.stringify(payload)
       });
+      const result = await res.json().catch(() => ({}));
+
       if (res.ok) {
         updateSyncBadge('synced');
         if (showFeedback) showToast('✓ 雲端備份已更新成功！', 'success');
       } else {
-        throw new Error();
+        const errorMsg = result.message || `HTTP ${res.status}`;
+        console.error('JSONBin 推送失敗:', res.status, result);
+        updateSyncBadge('failed');
+        showToast(`⚠️ 雲端推送失敗: ${errorMsg}`, 'warning');
       }
-    } catch {
+    } catch (err) {
+      console.error('推送到雲端連線失敗:', err);
       updateSyncBadge('failed');
       if (showFeedback) showToast('推送到雲端失敗', 'warning');
     }
@@ -1330,7 +1337,6 @@
     });
   }
 
-  // --- 查單字加到指定資料夾 ---
   async function addSearchedWordToVocab() {
     if (!currentSearchedWord || selectedMeanings.length === 0) return;
 
