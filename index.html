@@ -89,11 +89,11 @@
 
     .header-tools { display: flex; align-items: center; gap: 0.3rem; }
 
-    /* 資料夾切換列 */
+    /* 資料夾分類切換列 */
     .folder-bar {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.45rem;
       background: var(--card-bg);
       padding: 0.5rem 0.8rem;
       border-bottom: 1px solid var(--border);
@@ -105,9 +105,9 @@
       display: flex;
       align-items: center;
       gap: 0.3rem;
-      padding: 0.35rem 0.75rem;
+      padding: 0.35rem 0.7rem;
       border-radius: 20px;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 600;
       background: var(--bg);
       color: var(--text-sub);
@@ -119,7 +119,7 @@
     .folder-tab:hover { border-color: var(--primary); color: var(--primary); }
     .folder-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     body.dark-mode .folder-tab.active { color: #121212; }
-    .folder-count-badge { font-size: 0.75rem; padding: 0.1rem 0.4rem; border-radius: 10px; background: rgba(0,0,0,0.12); }
+    .folder-count-badge { font-size: 0.72rem; padding: 0.1rem 0.35rem; border-radius: 10px; background: rgba(0,0,0,0.1); }
     .folder-tab.active .folder-count-badge { background: rgba(255,255,255,0.3); }
     body.dark-mode .folder-tab.active .folder-count-badge { background: rgba(0,0,0,0.25); }
 
@@ -522,7 +522,7 @@
   </div>
 </header>
 
-<!-- 資料夾分類選擇列 -->
+<!-- 四大分流資料夾切換列 -->
 <div class="folder-bar">
   <span style="font-size: 0.8rem; color: var(--text-sub); font-weight: 700; white-space: nowrap;">📁 分類庫：</span>
   <button class="folder-tab active" id="tab-folder-all" onclick="selectFolder('all')">
@@ -531,8 +531,14 @@
   <button class="folder-tab" id="tab-folder-review" onclick="selectFolder('review')">
     📝 題目加強複習 <span class="folder-count-badge" id="badge-count-review">0</span>
   </button>
-  <button class="folder-tab" id="tab-folder-general" onclick="selectFolder('general')">
-    📚 高頻詞庫精選 <span class="folder-count-badge" id="badge-count-general">0</span>
+  <button class="folder-tab" id="tab-folder-g1" onclick="selectFolder('g1')">
+    📚 高頻 Level 1 <span class="folder-count-badge" id="badge-count-g1">0</span>
+  </button>
+  <button class="folder-tab" id="tab-folder-g2" onclick="selectFolder('g2')">
+    📚 高頻 Level 2 <span class="folder-count-badge" id="badge-count-g2">0</span>
+  </button>
+  <button class="folder-tab" id="tab-folder-g3" onclick="selectFolder('g3')">
+    📚 高頻 Level 3 <span class="folder-count-badge" id="badge-count-g3">0</span>
   </button>
 </div>
 
@@ -574,8 +580,10 @@
             </div>
             <div style="display: flex; align-items: center; gap: 0.4rem;">
               <select id="search-target-folder" class="folder-select-inline" title="存入指定資料夾">
-                <option value="review">存入：📝 題目加強複習</option>
-                <option value="general" selected>存入：📚 高頻詞庫精選</option>
+                <option value="review" selected>存入：📝 題目加強複習</option>
+                <option value="g1">存入：📚 高頻 Level 1</option>
+                <option value="g2">存入：📚 高頻 Level 2</option>
+                <option value="g3">存入：📚 高頻 Level 3</option>
               </select>
               <button id="add-to-vocab-btn" class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="addSearchedWordToVocab()" disabled>➕ 加到單字庫</button>
             </div>
@@ -673,7 +681,7 @@
     <div class="cloud-card">
       <div>
         <h4 style="color: var(--primary); font-size: 1rem;">☁️ 手機／電腦跨裝置同步</h4>
-        <span style="font-size: 0.85rem; color: var(--text-sub);">已啟用專屬 X-Access-Key 與高效壓縮，解除 100KB 容量限制</span>
+        <span style="font-size: 0.85rem; color: var(--text-sub);">四分流 Bin 架構已啟用，總容量 400KB 突破限制</span>
       </div>
       <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <button class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="pullFromCloud(true)">⬇️ 從雲端抓取並合併</button>
@@ -697,7 +705,9 @@
         <span style="font-size: 0.85rem; color: var(--text-sub);">批次匯入歸屬資料夾：</span>
         <select id="batch-import-folder" class="folder-select-inline">
           <option value="review">📝 題目加強複習</option>
-          <option value="general" selected>📚 高頻詞庫精選</option>
+          <option value="g1" selected>📚 高頻 Level 1</option>
+          <option value="g2">📚 高頻 Level 2</option>
+          <option value="g3">📚 高頻 Level 3</option>
         </select>
       </div>
       <p style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 0.4rem;">
@@ -739,9 +749,14 @@
 <div id="toast-notice"></div>
 
 <script>
-  // 專屬 Private Bin ID 與 X-Access-Key
-  const CLOUD_BIN_ID = '6ace26c4ffd5d1605367353c';
+  // 專屬 X-Access-Key
   const CLOUD_ACCESS_KEY = '$2a$10$BQiPvUFsFgh31CaR..ukzuBMHEsXjajVNtrtvu72je8.spE6JTvke';
+
+  // 四大分流 Bin ID
+  const BIN_REVIEW    = '6ace26c4ffd5d1605367353c'; // 題目加強複習專用
+  const BIN_GENERAL_1 = '6ace307aac6210605a2daac9';   // 高頻 Level 1
+  const BIN_GENERAL_2 = '6ace3086ac6210605a2daae1';   // 高頻 Level 2
+  const BIN_GENERAL_3 = '6ace3092ffd5d160536750a8';   // 高頻 Level 3
 
   const STORAGE_KEY_TEXT = 'quizlet_words_text';
   const STORAGE_KEY_STATS = 'quizlet_words_stats';
@@ -759,7 +774,7 @@
   let isAutoSpeechOn = false;
   let isSoundEnabled = true;
 
-  // 資料夾狀態：'all' | 'review' | 'general'
+  // 資料夾狀態：'all' | 'review' | 'g1' | 'g2' | 'g3'
   let currentFolder = 'all';
 
   let matchTimer = null, matchStartTime = 0, selectedTile = null, matchedPairsCount = 0;
@@ -838,7 +853,7 @@
       document.getElementById('sound-toggle-btn').textContent = '🔕';
     }
     const savedFolder = localStorage.getItem(STORAGE_KEY_ACTIVE_FOLDER);
-    if (savedFolder && ['all', 'review', 'general'].includes(savedFolder)) {
+    if (savedFolder && ['all', 'review', 'g1', 'g2', 'g3'].includes(savedFolder)) {
       currentFolder = savedFolder;
     }
   }
@@ -870,32 +885,40 @@
     renderStatsTable();
     refreshWriteModeData();
 
-    const folderNames = { all: '全部單字', review: '📝 題目加強複習', general: '📚 高頻詞庫精選' };
+    const folderNames = { 
+      all: '全部單字', 
+      review: '📝 題目加強複習', 
+      g1: '📚 高頻 Level 1', 
+      g2: '📚 高頻 Level 2', 
+      g3: '📚 高頻 Level 3' 
+    };
     showToast(`切換至：${folderNames[folderKey]}`, 'info');
   }
 
   function getFilteredVocabList() {
     if (currentFolder === 'all') return vocabList;
     return vocabList.filter(w => {
-      const f = vocabStats[w]?.folder || 'general';
+      const f = vocabStats[w]?.folder || 'g1';
       return f === currentFolder;
     });
   }
 
   function updateFolderBadges() {
     const totalCount = vocabList.length;
-    let reviewCount = 0;
-    let generalCount = 0;
+    let counts = { review: 0, g1: 0, g2: 0, g3: 0 };
 
     vocabList.forEach(w => {
-      const f = vocabStats[w]?.folder || 'general';
-      if (f === 'review') reviewCount++;
-      else generalCount++;
+      let f = vocabStats[w]?.folder || 'g1';
+      if (f === 'general') f = 'g1'; // 兼容舊版
+      if (counts[f] !== undefined) counts[f]++;
+      else counts.g1++;
     });
 
     document.getElementById('badge-count-all').textContent = totalCount;
-    document.getElementById('badge-count-review').textContent = reviewCount;
-    document.getElementById('badge-count-general').textContent = generalCount;
+    document.getElementById('badge-count-review').textContent = counts.review;
+    document.getElementById('badge-count-g1').textContent = counts.g1;
+    document.getElementById('badge-count-g2').textContent = counts.g2;
+    document.getElementById('badge-count-g3').textContent = counts.g3;
   }
 
   function changeWordFolder(word, newFolder) {
@@ -922,8 +945,8 @@
     }
 
     vocabList.forEach(w => {
-      if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: 'general' };
-      if (!vocabStats[w].folder) vocabStats[w].folder = 'general';
+      if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: 'g1' };
+      if (!vocabStats[w].folder || vocabStats[w].folder === 'general') vocabStats[w].folder = 'g1';
     });
 
     selectFolder(currentFolder);
@@ -933,82 +956,84 @@
     await pullFromCloud(false);
   };
 
-  // --- 兼容舊版與新版壓縮格式的雲端拉取 ---
+  // --- 四大 Bin 聚合拉取邏輯 ---
   async function pullFromCloud(showFeedback = true) {
     try {
-      if (showFeedback) showToast('正在連接雲端並安全合併...', 'info');
+      if (showFeedback) showToast('正在從多個資料庫抓取並合併...', 'info');
       updateSyncBadge('syncing');
 
-      const res = await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}/latest?t=${Date.now()}`, {
-        method: 'GET',
-        headers: { 
-          'X-Access-Key': CLOUD_ACCESS_KEY,
-          'Cache-Control': 'no-cache'
-        },
-        cache: 'no-store'
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const record = data.record;
+      // 聚合所有有效的 Bin
+      const binConfigs = [
+        { id: BIN_REVIEW, defaultFolder: 'review' },
+        { id: BIN_GENERAL_1, defaultFolder: 'g1' },
+        { id: BIN_GENERAL_2, defaultFolder: 'g2' },
+        { id: BIN_GENERAL_3, defaultFolder: 'g3' }
+      ].filter(cfg => cfg.id && !cfg.id.includes('請填入'));
 
-      if (!record) {
-        updateSyncBadge('synced');
-        return;
-      }
+      const headers = { 
+        'X-Access-Key': CLOUD_ACCESS_KEY,
+        'Cache-Control': 'no-cache'
+      };
 
-      // 判斷是否為新版壓縮格式 (v: 2)
-      if (record.v === 2 && Array.isArray(record.list)) {
-        const cloudWords = [];
-        record.list.forEach(item => {
-          const w = item.w;
-          cloudWords.push(w);
-          if (!vocabStats[w]) {
-            vocabStats[w] = {
-              meaning: item.m || '',
-              correct: item.c || 0,
-              total: item.t || 0,
-              folder: item.f === 'r' ? 'review' : 'general'
-            };
-          } else {
-            vocabStats[w].meaning = item.m || vocabStats[w].meaning;
-            vocabStats[w].correct = Math.max(vocabStats[w].correct, item.c || 0);
-            vocabStats[w].total = Math.max(vocabStats[w].total, item.t || 0);
-            vocabStats[w].folder = (item.f === 'r' ? 'review' : 'general') || vocabStats[w].folder;
-          }
-        });
+      const fetchPromises = binConfigs.map(cfg =>
+        fetch(`https://api.jsonbin.io/v3/b/${cfg.id}/latest?t=${Date.now()}`, {
+          method: 'GET',
+          headers,
+          cache: 'no-store'
+        })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => ({ data, defaultFolder: cfg.defaultFolder }))
+        .catch(() => null)
+      );
 
-        vocabList = [...new Set([...cloudWords, ...vocabList])];
-      } 
-      // 兼容舊版原始格式
-      else if (record.wordsText) {
-        const cloudParsed = parseLinesWithCustomMeaning(record.wordsText);
-        const cloudWords = cloudParsed.map(item => item.word);
+      const responses = await Promise.all(fetchPromises);
+      const cloudWords = [];
 
-        if (record.wordsStats) {
-          for (let w in record.wordsStats) {
+      responses.forEach(item => {
+        if (!item || !item.data || !item.data.record) return;
+        const record = item.data.record;
+        const defFolder = item.defaultFolder;
+
+        // 壓縮格式 (v: 2)
+        if (record.v === 2 && Array.isArray(record.list)) {
+          record.list.forEach(wItem => {
+            const w = wItem.w;
+            cloudWords.push(w);
+            let folder = wItem.f || defFolder;
+            if (folder === 'r') folder = 'review';
+            if (folder === 'g') folder = 'g1';
+
             if (!vocabStats[w]) {
-              vocabStats[w] = record.wordsStats[w];
+              vocabStats[w] = {
+                meaning: wItem.m || '',
+                correct: wItem.c || 0,
+                total: wItem.t || 0,
+                folder: folder
+              };
             } else {
-              vocabStats[w].meaning = record.wordsStats[w].meaning || vocabStats[w].meaning;
-              vocabStats[w].total = Math.max(vocabStats[w].total, record.wordsStats[w].total);
-              vocabStats[w].correct = Math.max(vocabStats[w].correct, record.wordsStats[w].correct);
-              vocabStats[w].folder = record.wordsStats[w].folder || vocabStats[w].folder || 'general';
+              vocabStats[w].meaning = wItem.m || vocabStats[w].meaning;
+              vocabStats[w].correct = Math.max(vocabStats[w].correct, wItem.c || 0);
+              vocabStats[w].total = Math.max(vocabStats[w].total, wItem.t || 0);
+              vocabStats[w].folder = folder || vocabStats[w].folder;
             }
-          }
+          });
         }
+        // 舊版兼容格式
+        else if (record.wordsText) {
+          const cloudParsed = parseLinesWithCustomMeaning(record.wordsText);
+          cloudParsed.forEach(pItem => {
+            cloudWords.push(pItem.word);
+            if (!vocabStats[pItem.word]) {
+              vocabStats[pItem.word] = { meaning: pItem.customMeaning || '', correct: 0, total: 0, folder: defFolder };
+            }
+          });
+        }
+      });
 
-        cloudParsed.forEach(item => {
-          if (item.customMeaning && (!vocabStats[item.word] || !vocabStats[item.word].meaning)) {
-            vocabStats[item.word] = { meaning: item.customMeaning, correct: 0, total: 0, folder: 'general' };
-          }
-        });
-
-        vocabList = [...new Set([...cloudWords, ...vocabList])];
-      }
-
+      vocabList = [...new Set([...cloudWords, ...vocabList])];
       vocabList.forEach(w => {
-        if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: 'general' };
-        if (!vocabStats[w].folder) vocabStats[w].folder = 'general';
+        if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: 'g1' };
+        if (!vocabStats[w].folder) vocabStats[w].folder = 'g1';
       });
 
       const newText = serializeVocabListToText();
@@ -1023,7 +1048,7 @@
 
       await autoFillMissingTranslations();
       updateSyncBadge('synced');
-      if (showFeedback) showToast('✓ 雲端資料已同步最新！', 'success');
+      if (showFeedback) showToast('✓ 四分流題庫合併完成！', 'success');
     } catch (err) {
       console.error('拉取雲端失敗:', err);
       updateSyncBadge('failed');
@@ -1031,56 +1056,72 @@
     }
   }
 
-  // --- 瘦身版推送到雲端 (體積縮減 65% 以上，防止超過 100KB 限制) ---
+  // --- 四大 Bin 分流推送邏輯 (打破 100KB 限制) ---
   async function pushToCloud(showFeedback = false) {
     if (vocabList.length === 0) {
-      if (showFeedback) showToast('本機題庫為空，拒絕推送以防清空雲端！', 'warning');
+      if (showFeedback) showToast('本機題庫為空，拒絕推送！', 'warning');
       return;
     }
 
     updateSyncBadge('syncing');
 
-    const compactWords = vocabList.map(w => {
+    // 依資料夾分流單字
+    const binsData = {
+      review: [],
+      g1: [],
+      g2: [],
+      g3: []
+    };
+
+    vocabList.forEach(w => {
       const item = vocabStats[w] || {};
-      return {
+      let f = item.folder || 'g1';
+      if (f === 'general') f = 'g1';
+      if (!binsData[f]) f = 'g1';
+
+      binsData[f].push({
         w: w,
         m: item.meaning || '',
         c: item.correct || 0,
         t: item.total || 0,
-        f: item.folder === 'review' ? 'r' : 'g'
-      };
+        f: f
+      });
     });
 
-    const payload = {
-      v: 2,
-      list: compactWords,
-      u: Date.now()
-    };
-
     try {
-      const res = await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Access-Key': CLOUD_ACCESS_KEY
-        },
-        body: JSON.stringify(payload)
-      });
-      const result = await res.json().catch(() => ({}));
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-Access-Key': CLOUD_ACCESS_KEY
+      };
 
-      if (res.ok) {
+      const pushTasks = [
+        { id: BIN_REVIEW, list: binsData.review },
+        { id: BIN_GENERAL_1, list: binsData.g1 },
+        { id: BIN_GENERAL_2, list: binsData.g2 },
+        { id: BIN_GENERAL_3, list: binsData.g3 }
+      ].filter(t => t.id && !t.id.includes('請填入'));
+
+      const promises = pushTasks.map(task =>
+        fetch(`https://api.jsonbin.io/v3/b/${task.id}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ v: 2, list: task.list, u: Date.now() })
+        })
+      );
+
+      const results = await Promise.all(promises);
+      const allOk = results.every(res => res.ok);
+
+      if (allOk) {
         updateSyncBadge('synced');
-        if (showFeedback) showToast('✓ 雲端備份已更新成功！', 'success');
+        if (showFeedback) showToast('✓ 四分流資料庫備份成功！', 'success');
       } else {
-        const errorMsg = result.message || `HTTP ${res.status}`;
-        console.error('JSONBin 推送失敗:', res.status, result);
-        updateSyncBadge('failed');
-        showToast(`⚠️ 雲端推送失敗: ${errorMsg}`, 'warning');
+        throw new Error('部分資料庫推送失敗');
       }
     } catch (err) {
-      console.error('推送到雲端連線失敗:', err);
+      console.error('推送到雲端失敗:', err);
       updateSyncBadge('failed');
-      if (showFeedback) showToast('推送到雲端失敗', 'warning');
+      if (showFeedback) showToast('⚠️ 雲端推送失敗，請檢查新建立的 Bin ID 是否填妥', 'warning');
     }
   }
 
@@ -1378,7 +1419,7 @@
   async function addSearchedWordToVocab() {
     if (!currentSearchedWord || selectedMeanings.length === 0) return;
 
-    const chosenFolder = document.getElementById('search-target-folder').value || 'general';
+    const chosenFolder = document.getElementById('search-target-folder').value || 'g1';
     const finalMeaning = selectedMeanings.join('；');
 
     if (vocabList.includes(currentSearchedWord)) {
@@ -1435,7 +1476,7 @@
           meaning: primary || '（暫無釋義）', 
           correct: (vocabStats[w] ? vocabStats[w].correct : 0), 
           total: (vocabStats[w] ? vocabStats[w].total : 0),
-          folder: (vocabStats[w]?.folder || 'general')
+          folder: (vocabStats[w]?.folder || 'g1')
         };
         hasUpdate = true;
       }
@@ -1459,7 +1500,7 @@
 
   async function syncVocabDatabase(importedRawText = null) {
     const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
-    const batchFolder = document.getElementById('batch-import-folder').value || 'general';
+    const batchFolder = document.getElementById('batch-import-folder').value || 'g1';
     const parsedItems = parseLinesWithCustomMeaning(rawText);
 
     const brandNewWords = [];
@@ -1509,7 +1550,7 @@
     }
 
     if (!vocabStats[word]) {
-      vocabStats[word] = { meaning: newMeaning, correct: 0, total: 0, folder: 'general' };
+      vocabStats[word] = { meaning: newMeaning, correct: 0, total: 0, folder: 'g1' };
     } else {
       vocabStats[word].meaning = newMeaning;
     }
@@ -2076,8 +2117,11 @@
     }
 
     displayList.forEach(w => {
-      const item = vocabStats[w] || { meaning: '...', correct: 0, total: 0, folder: 'general' };
+      const item = vocabStats[w] || { meaning: '...', correct: 0, total: 0, folder: 'g1' };
       const rate = item.total === 0 ? 0 : Math.round((item.correct / item.total) * 100);
+      let curFolder = item.folder || 'g1';
+      if (curFolder === 'general') curFolder = 'g1';
+
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>
@@ -2092,8 +2136,10 @@
         </td>
         <td>
           <select class="folder-select-inline" onchange="changeWordFolder('${w}', this.value)">
-            <option value="review" ${item.folder === 'review' ? 'selected' : ''}>📝 題目複習</option>
-            <option value="general" ${item.folder !== 'review' ? 'selected' : ''}>📚 高頻詞庫</option>
+            <option value="review" ${curFolder === 'review' ? 'selected' : ''}>📝 題目複習</option>
+            <option value="g1" ${curFolder === 'g1' ? 'selected' : ''}>📚 高頻 L1</option>
+            <option value="g2" ${curFolder === 'g2' ? 'selected' : ''}>📚 高頻 L2</option>
+            <option value="g3" ${curFolder === 'g3' ? 'selected' : ''}>📚 高頻 L3</option>
           </select>
         </td>
         <td>${item.total}</td>
@@ -2181,7 +2227,7 @@
   function exportVocab() {
     const text = serializeVocabListToText();
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    a = document.createElement('a');
+    const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'my_english_vocab.txt';
     a.click();
