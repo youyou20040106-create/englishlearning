@@ -441,7 +441,14 @@
     .write-panel { background: var(--card-bg); border-radius: 12px; padding: 1.8rem 1rem; border: 1px solid var(--border); text-align: center; }
     .write-input { width: 85%; padding: 0.75rem 1rem; font-size: 1.1rem; border: 2px solid var(--border); border-radius: 8px; margin: 1.2rem 0; text-align: center; outline: none; background: transparent; color: var(--text-main); }
     .diff-container { font-size: 1.15rem; margin-top: 0.5rem; font-weight: 600; }
-    .diff-wrong { color: var(--danger); text-decoration: underline wavy; font-weight: bold; }
+    .diff-wrong 
+    { 
+      color: var(--danger); 
+      background: rgba(217, 48, 37, 0.12); 
+      padding: 0.1rem 0.25rem; 
+      border-radius: 4px; 
+      font-weight: bold; 
+    }
     .diff-correct { color: var(--success); }
 
     .match-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-top: 1rem; }
