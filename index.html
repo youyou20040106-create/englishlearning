@@ -1528,9 +1528,10 @@
     if (hasUpdate) await pushToCloud(false);
   }
 
-  async function syncVocabDatabase(importedRawText = null) {
+async function syncVocabDatabase(importedRawText = null) {
     const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
-    const batchFolder = document.getElementById('batch-import-folder').value || (currentFolder === 'all' ? 'g1' : currentFolder);
+    // 直接沿用頂端分類：若是「全部單字」則預設存入 g1，否則直接存入當前資料夾
+    const targetFolder = (currentFolder === 'all') ? 'g1' : currentFolder;
     const parsedItems = parseLinesWithCustomMeaning(rawText);
 
     const brandNewWords = [];
@@ -1539,7 +1540,7 @@
     parsedItems.forEach(item => {
       if (item.customMeaning) {
         if (!vocabStats[item.word]) {
-          vocabStats[item.word] = { meaning: item.customMeaning, correct: 0, total: 0, folder: batchFolder };
+          vocabStats[item.word] = { meaning: item.customMeaning, correct: 0, total: 0, folder: targetFolder };
         } else {
           vocabStats[item.word].meaning = item.customMeaning;
         }
@@ -1556,8 +1557,8 @@
     vocabList = [...brandNewWords, ...oldWords, ...otherExisting];
 
     vocabList.forEach(w => {
-      if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: batchFolder };
-      if (!vocabStats[w].folder) vocabStats[w].folder = batchFolder;
+      if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: targetFolder };
+      if (!vocabStats[w].folder) vocabStats[w].folder = targetFolder;
     });
 
     localStorage.setItem(STORAGE_KEY_TEXT, serializeVocabListToText());
@@ -1568,7 +1569,6 @@
     await pushToCloud(false);
     showToast('✓ 單字庫與雲端備份已同步完成！', 'success');
   }
-
   function saveEditedMeaning(word) {
     const inputElem = document.getElementById(`edit-meaning-${word}`);
     if (!inputElem) return;
