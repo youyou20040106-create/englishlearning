@@ -89,7 +89,7 @@
 
     .header-tools { display: flex; align-items: center; gap: 0.3rem; }
 
-    /* 四大分流資料夾切換列 */
+    /* 五大分流資料夾切換列 */
     .folder-bar {
       display: flex;
       align-items: center;
@@ -441,10 +441,9 @@
     .write-panel { background: var(--card-bg); border-radius: 12px; padding: 1.8rem 1rem; border: 1px solid var(--border); text-align: center; }
     .write-input { width: 85%; padding: 0.75rem 1rem; font-size: 1.1rem; border: 2px solid var(--border); border-radius: 8px; margin: 1.2rem 0; text-align: center; outline: none; background: transparent; color: var(--text-main); }
     .diff-container { font-size: 1.15rem; margin-top: 0.5rem; font-weight: 600; }
-    .diff-wrong 
-    { 
+    .diff-wrong { 
       color: var(--danger); 
-      background: rgba(217, 48, 37, 0.12); 
+      background: rgba(217, 48, 37, 0.14); 
       padding: 0.1rem 0.25rem; 
       border-radius: 4px; 
       font-weight: bold; 
@@ -529,7 +528,7 @@
   </div>
 </header>
 
-<!-- 四大分流資料夾切換列 -->
+<!-- 五大分流資料夾切換列 -->
 <div class="folder-bar">
   <span style="font-size: 0.8rem; color: var(--text-sub); font-weight: 700; white-space: nowrap;">📁 分類庫：</span>
   <button class="folder-tab active" id="tab-folder-all" onclick="selectFolder('all')">
@@ -537,6 +536,9 @@
   </button>
   <button class="folder-tab" id="tab-folder-review" onclick="selectFolder('review')">
     📝 題目加強複習 <span class="folder-count-badge" id="badge-count-review">0</span>
+  </button>
+  <button class="folder-tab" id="tab-folder-daily" onclick="selectFolder('daily')">
+    💡 日常隨想單字 <span class="folder-count-badge" id="badge-count-daily">0</span>
   </button>
   <button class="folder-tab" id="tab-folder-g1" onclick="selectFolder('g1')">
     📚 高頻 Level 1 <span class="folder-count-badge" id="badge-count-g1">0</span>
@@ -585,15 +587,8 @@
               <button class="icon-btn" title="朗讀翻譯結果" onclick="speakResultContent()">🔊</button>
               <button class="icon-btn" title="複製結果" onclick="copyTranslation()">📋</button>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.4rem;">
-              <select id="search-target-folder" class="folder-select-inline" title="存入指定資料夾">
-                <option value="review" selected>存入：📝 題目加強複習</option>
-                <option value="g1">存入：📚 高頻 Level 1</option>
-                <option value="g2">存入：📚 高頻 Level 2</option>
-                <option value="g3">存入：📚 高頻 Level 3</option>
-              </select>
-              <button id="add-to-vocab-btn" class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="addSearchedWordToVocab()" disabled>➕ 加到單字庫</button>
-            </div>
+            <!-- 下方選單已完全移除，依據頂端分類直接存入 -->
+            <button id="add-to-vocab-btn" class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="addSearchedWordToVocab()" disabled>➕ 加到單字庫</button>
           </div>
         </div>
       </div>
@@ -688,7 +683,7 @@
     <div class="cloud-card">
       <div>
         <h4 style="color: var(--primary); font-size: 1rem;">☁️ 手機／電腦跨裝置同步</h4>
-        <span style="font-size: 0.85rem; color: var(--text-sub);">四大分流全新 Bin 已就位，總容量 400KB 跨裝置安全互通</span>
+        <span style="font-size: 0.85rem; color: var(--text-sub);">五大分流 Bin 架構已啟用，總容量 500KB 跨裝置安全互通</span>
       </div>
       <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <button class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="pullFromCloud(true)">⬇️ 從雲端抓取並合併</button>
@@ -708,7 +703,6 @@
           <button class="btn btn-danger" style="padding: 0.35rem 0.6rem; font-size: 0.85rem;" onclick="clearAllData()">🗑️ 清空</button>
         </div>
       </div>
-     
       <p style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 0.4rem;">
         每行可填「<b>單字</b>」或「<b>單字, 中文釋義</b>」（支援逗號、Tab、等號、冒號分隔；有中文者不會被 Google 覆蓋）：
       </p>
@@ -751,11 +745,12 @@
   // 認證金鑰設定（Master Key 最高權限）
   const CLOUD_MASTER_KEY = '$2a$10$QlqWn3T/df0qMYBtYokJVuNQLieKy.fOW97gM0pX/b/yC/NlVXBQe';
 
-  // 四大全新分流 Bin ID
-  const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // review: 題目加強複習專用[cite: 9]
-  const BIN_GENERAL_1 = '6ace3b9bac6210605a2dcfb8'; // bin1: 高頻 Level 1[cite: 9]
-  const BIN_GENERAL_2 = '6ace3ba7ffd5d160536774a2'; // bin2: 高頻 Level 2[cite: 9]
-  const BIN_GENERAL_3 = '6ace3bb1ac6210605a2dcff8'; // bin3: 高頻 Level 3[cite: 9]
+  // 五大分流 Bin ID
+  const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // 題目加強複習專用[cite: 9]
+  const BIN_DAILY     = '6ad0d5ecffd5d160536d9c7e'; // 日常隨想單字專屬 Bin (請在 JSONBin 建立後貼上)
+  const BIN_GENERAL_1 = '6ace3b9bac6210605a2dcfb8'; // 高頻 Level 1[cite: 9]
+  const BIN_GENERAL_2 = '6ace3ba7ffd5d160536774a2'; // 高頻 Level 2[cite: 9]
+  const BIN_GENERAL_3 = '6ace3bb1ac6210605a2dcff8'; // 高頻 Level 3[cite: 9]
 
   const STORAGE_KEY_TEXT = 'quizlet_words_text';
   const STORAGE_KEY_STATS = 'quizlet_words_stats';
@@ -773,7 +768,7 @@
   let isAutoSpeechOn = false;
   let isSoundEnabled = true;
 
-  // 資料夾狀態：'all' | 'review' | 'g1' | 'g2' | 'g3'
+  // 資料夾狀態：'all' | 'review' | 'daily' | 'g1' | 'g2' | 'g3'
   let currentFolder = 'all';
 
   let matchTimer = null, matchStartTime = 0, selectedTile = null, matchedPairsCount = 0;
@@ -851,7 +846,7 @@
       document.getElementById('sound-toggle-btn').textContent = '🔕';
     }
     const savedFolder = localStorage.getItem(STORAGE_KEY_ACTIVE_FOLDER);
-    if (savedFolder && ['all', 'review', 'g1', 'g2', 'g3'].includes(savedFolder)) {
+    if (savedFolder && ['all', 'review', 'daily', 'g1', 'g2', 'g3'].includes(savedFolder)) {
       currentFolder = savedFolder;
     }
   }
@@ -869,7 +864,7 @@
     showToast(isSoundEnabled ? '音效已開啟' : '音效已靜音', 'info');
   }
 
-  // --- 取得當前資料夾嚴格篩選後的單字列表 ---
+  // --- 嚴格依目前分類篩選單字 ---
   function getFilteredVocabList() {
     if (currentFolder === 'all') return vocabList;
     return vocabList.filter(w => {
@@ -879,7 +874,6 @@
     });
   }
 
-  // --- 依指定單字列表產生每行純文字 ---
   function serializeVocabListToText(targetList = null) {
     const list = targetList || vocabList;
     return list.map(w => {
@@ -888,7 +882,6 @@
     }).join('\n');
   }
 
-  // 更新輸入文字框，讓它只顯示當前資料夾的單字
   function refreshRawInputArea() {
     const currentList = getFilteredVocabList();
     const inputArea = document.getElementById('raw-vocab-input');
@@ -897,7 +890,7 @@
     }
   }
 
-  // --- 資料夾切換與連動機制 ---
+  // --- 資料夾切換連動 ---
   function selectFolder(folderKey) {
     currentFolder = folderKey;
     localStorage.setItem(STORAGE_KEY_ACTIVE_FOLDER, folderKey);
@@ -909,12 +902,12 @@
     const folderNames = { 
       all: '全部單字', 
       review: '📝 題目加強複習', 
+      daily: '💡 日常隨想單字',
       g1: '📚 高頻 Level 1', 
       g2: '📚 高頻 Level 2', 
       g3: '📚 高頻 Level 3' 
     };
 
-    // 同步更新標題與輸入框
     document.getElementById('vocab-box-title').textContent = `自訂英文單字庫 (${folderNames[folderKey]})`;
     document.getElementById('stat-table-title').textContent = `📊 學習統計 (${folderNames[folderKey]})`;
 
@@ -929,7 +922,7 @@
 
   function updateFolderBadges() {
     const totalCount = vocabList.length;
-    let counts = { review: 0, g1: 0, g2: 0, g3: 0 };
+    let counts = { review: 0, daily: 0, g1: 0, g2: 0, g3: 0 };
 
     vocabList.forEach(w => {
       let f = vocabStats[w]?.folder || 'g1';
@@ -940,6 +933,7 @@
 
     document.getElementById('badge-count-all').textContent = totalCount;
     document.getElementById('badge-count-review').textContent = counts.review;
+    document.getElementById('badge-count-daily').textContent = counts.daily;
     document.getElementById('badge-count-g1').textContent = counts.g1;
     document.getElementById('badge-count-g2').textContent = counts.g2;
     document.getElementById('badge-count-g3').textContent = counts.g3;
@@ -987,7 +981,7 @@
     };
   }
 
-  // --- 自動分流推送到四大全新 Bin ---
+  // --- 自動分流推送到五大 Bin ---
   async function pushToCloud(showFeedback = false) {
     if (vocabList.length === 0) {
       if (showFeedback) showToast('本機題庫為空，拒絕推送！', 'warning');
@@ -998,6 +992,7 @@
 
     const binsData = {
       review: [],
+      daily: [],
       g1: [],
       g2: [],
       g3: []
@@ -1016,10 +1011,11 @@
       const headers = getCloudHeaders();
       const pushTasks = [
         { id: BIN_REVIEW, list: binsData.review, name: '題目複習' },
+        { id: BIN_DAILY, list: binsData.daily, name: '日常隨想' },
         { id: BIN_GENERAL_1, list: binsData.g1, name: '高頻 L1' },
         { id: BIN_GENERAL_2, list: binsData.g2, name: '高頻 L2' },
         { id: BIN_GENERAL_3, list: binsData.g3, name: '高頻 L3' }
-      ];
+      ].filter(t => t.id && !t.id.includes('請填入'));
 
       const promises = pushTasks.map(task =>
         fetch(`https://api.jsonbin.io/v3/b/${task.id}`, {
@@ -1037,7 +1033,7 @@
 
       await Promise.all(promises);
       updateSyncBadge('synced');
-      if (showFeedback) showToast('✓ 四分流資料庫備份成功！', 'success');
+      if (showFeedback) showToast('✓ 五分流資料庫備份成功！', 'success');
     } catch (err) {
       console.error('推送到雲端失敗:', err);
       updateSyncBadge('failed');
@@ -1045,7 +1041,7 @@
     }
   }
 
-  // --- 四大 Bin 聚合拉取邏輯 ---
+  // --- 五大 Bin 聚合拉取邏輯 ---
   async function pullFromCloud(showFeedback = true) {
     try {
       if (showFeedback) showToast('正在從雲端抓取題庫...', 'info');
@@ -1053,10 +1049,11 @@
 
       const binConfigs = [
         { id: BIN_REVIEW, defaultFolder: 'review', name: '題目複習' },
+        { id: BIN_DAILY, defaultFolder: 'daily', name: '日常隨想' },
         { id: BIN_GENERAL_1, defaultFolder: 'g1', name: '高頻 L1' },
         { id: BIN_GENERAL_2, defaultFolder: 'g2', name: '高頻 L2' },
         { id: BIN_GENERAL_3, defaultFolder: 'g3', name: '高頻 L3' }
-      ];
+      ].filter(cfg => cfg.id && !cfg.id.includes('請填入'));
 
       const headers = getCloudHeaders();
 
@@ -1066,18 +1063,11 @@
           headers: headers
         })
         .then(async res => {
-          if (!res.ok) {
-            const errJson = await res.json().catch(() => ({}));
-            console.warn(`Bin ${cfg.name} 狀態: ${res.status}`, errJson);
-            return null;
-          }
+          if (!res.ok) return null;
           return res.json();
         })
         .then(data => ({ data, defaultFolder: cfg.defaultFolder, name: cfg.name }))
-        .catch(err => {
-          console.warn(`連線 ${cfg.name} 失敗:`, err);
-          return null;
-        })
+        .catch(() => null)
       );
 
       const responses = await Promise.all(fetchPromises);
@@ -1131,7 +1121,6 @@
 
       if (cloudWords.length === 0) {
         updateSyncBadge('synced');
-        if (showFeedback) alert("⚠️ 雲端目前為空！請確認電腦端是否有單字並按「強制推送到雲端」。");
         return;
       }
 
@@ -1160,7 +1149,7 @@
     } catch (err) {
       console.error('拉取雲端失敗:', err);
       updateSyncBadge('failed');
-      alert(`同步失敗: ${err.message}`);
+      if (showFeedback) showToast('無法連接雲端，維持目前本機題庫', 'warning');
     }
   }
 
@@ -1448,10 +1437,12 @@
     });
   }
 
+  // --- 查單字加到當前頂端選取的資料夾 ---
   async function addSearchedWordToVocab() {
     if (!currentSearchedWord || selectedMeanings.length === 0) return;
 
-    const chosenFolder = document.getElementById('search-target-folder').value || 'g1';
+    // 直接取用頂端分類，若在「全部單字」則預設加入「日常隨想」
+    const chosenFolder = (currentFolder === 'all') ? 'daily' : currentFolder;
     const finalMeaning = selectedMeanings.join('；');
 
     if (vocabList.includes(currentSearchedWord)) {
@@ -1471,7 +1462,7 @@
         renderStatsTable();
         initFlashcards(false);
         refreshWriteModeData();
-        showToast(`✓ 「${currentSearchedWord}」已更新並移至指定資料夾！`, 'success');
+        showToast(`✓ 「${currentSearchedWord}」已更新並移至當前分類！`, 'success');
         await pushToCloud(false);
         return;
       }
@@ -1490,7 +1481,7 @@
     renderStatsTable();
     initFlashcards(true);
     refreshWriteModeData();
-    showToast(`✓ 已加入「${currentSearchedWord}」至指定資料夾！`, 'success');
+    showToast(`✓ 已加入「${currentSearchedWord}」至當前分類！`, 'success');
     await pushToCloud(false);
   }
 
@@ -1528,10 +1519,10 @@
     if (hasUpdate) await pushToCloud(false);
   }
 
-async function syncVocabDatabase(importedRawText = null) {
+  // --- 同步建立索引：直接沿用頂端分類 ---
+  async function syncVocabDatabase(importedRawText = null) {
     const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
-    // 直接沿用頂端分類：若是「全部單字」則預設存入 g1，否則直接存入當前資料夾
-    const targetFolder = (currentFolder === 'all') ? 'g1' : currentFolder;
+    const targetFolder = (currentFolder === 'all') ? 'daily' : currentFolder;
     const parsedItems = parseLinesWithCustomMeaning(rawText);
 
     const brandNewWords = [];
@@ -1569,6 +1560,7 @@ async function syncVocabDatabase(importedRawText = null) {
     await pushToCloud(false);
     showToast('✓ 單字庫與雲端備份已同步完成！', 'success');
   }
+
   function saveEditedMeaning(word) {
     const inputElem = document.getElementById(`edit-meaning-${word}`);
     if (!inputElem) return;
@@ -2135,6 +2127,7 @@ async function syncVocabDatabase(importedRawText = null) {
         <td>
           <select class="folder-select-inline" onchange="changeWordFolder('${w}', this.value)">
             <option value="review" ${curFolder === 'review' ? 'selected' : ''}>📝 題目複習</option>
+            <option value="daily" ${curFolder === 'daily' ? 'selected' : ''}>💡 日常隨想</option>
             <option value="g1" ${curFolder === 'g1' ? 'selected' : ''}>📚 高頻 L1</option>
             <option value="g2" ${curFolder === 'g2' ? 'selected' : ''}>📚 高頻 L2</option>
             <option value="g3" ${curFolder === 'g3' ? 'selected' : ''}>📚 高頻 L3</option>
