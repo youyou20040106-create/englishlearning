@@ -122,7 +122,9 @@
     
     .folder-tab.tab-weak { border-color: rgba(217,48,37,0.3); color: var(--danger); background: rgba(217,48,37,0.06); }
     .folder-tab.tab-weak.active { background: var(--danger) !important; color: #fff !important; border-color: var(--danger) !important; }
-    body.dark-mode .folder-tab.tab-weak.active { color: #121212 !important; }
+
+    .folder-tab.tab-mastered { border-color: rgba(30,142,62,0.3); color: var(--success); background: rgba(30,142,62,0.06); }
+    .folder-tab.tab-mastered.active { background: var(--success) !important; color: #fff !important; border-color: var(--success) !important; }
 
     .folder-count-badge { font-size: 0.72rem; padding: 0.1rem 0.35rem; border-radius: 10px; background: rgba(0,0,0,0.1); }
     .folder-tab.active .folder-count-badge { background: rgba(255,255,255,0.3); }
@@ -347,7 +349,7 @@
       transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       user-select: none;
     }
-    .flashcard-inner.flipped { transform: rotateY(180deg); }
+    .flashcard-inner.flipped { transform: rotateY(180deg) !important; }
     
     .flashcard-inner.swiping { transition: none !important; }
     .flashcard-inner.swipe-out-right { transform: translateX(120vw) rotate(30deg) !important; opacity: 0; transition: all 0.35s ease-out !important; }
@@ -358,6 +360,7 @@
       width: 100%;
       height: 100%;
       backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -367,7 +370,10 @@
       background: var(--card-bg);
       border: 2px solid var(--border);
     }
-    .card-face-back { transform: rotateY(180deg); background: rgba(0,0,0,0.02); }
+    .card-face-back { 
+      transform: rotateY(180deg); 
+      background: rgba(0,0,0,0.02); 
+    }
     .card-content { font-size: 2.1rem; font-weight: 700; word-break: break-word; }
     .card-hint { margin-top: 0.8rem; color: var(--text-sub); font-size: 0.85rem; }
     .card-speech-btn {
@@ -416,6 +422,18 @@
       padding: 0.2rem 0.5rem;
       border-radius: 12px;
       border: 1px solid rgba(217,48,37,0.3);
+      margin-left: 0.4rem;
+    }
+
+    .mastered-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--success);
+      background: rgba(30,142,62,0.12);
+      padding: 0.2rem 0.5rem;
+      border-radius: 12px;
+      border: 1px solid rgba(30,142,62,0.3);
       margin-left: 0.4rem;
     }
 
@@ -533,7 +551,7 @@
   </div>
 </header>
 
-<!-- 分流資料夾切換列（已新增 🔥 弱項特訓 (<30%)） -->
+<!-- 分流資料夾切換列（已加入 🎓 熟練單字庫） -->
 <div class="folder-bar">
   <span style="font-size: 0.8rem; color: var(--text-sub); font-weight: 700; white-space: nowrap;">📁 分類庫：</span>
   <button class="folder-tab active" id="tab-folder-all" onclick="selectFolder('all')">
@@ -541,6 +559,9 @@
   </button>
   <button class="folder-tab tab-weak" id="tab-folder-weak" onclick="selectFolder('weak')">
     🔥 弱項特訓 (<30%) <span class="folder-count-badge" id="badge-count-weak">0</span>
+  </button>
+  <button class="folder-tab tab-mastered" id="tab-folder-mastered" onclick="selectFolder('mastered')">
+    🎓 熟練單字 (已掌握) <span class="folder-count-badge" id="badge-count-mastered">0</span>
   </button>
   <button class="folder-tab" id="tab-folder-review" onclick="selectFolder('review')">
     📝 題目加強複習 <span class="folder-count-badge" id="badge-count-review">0</span>
@@ -607,6 +628,7 @@
       <div style="display: flex; align-items: center;">
         <span id="fc-counter" style="color: var(--text-sub); font-weight: 600; font-size: 0.9rem;">0 / 0</span>
         <span id="fc-weak-tag" class="weak-badge hidden">⚠️ 弱項優先</span>
+        <span id="fc-mastered-tag" class="mastered-badge hidden">🎓 已掌握熟詞</span>
       </div>
       <div style="display: flex; gap: 0.3rem; align-items: center;">
         <button class="btn btn-secondary" style="padding: 0.4rem 0.6rem; font-size: 0.85rem;" onclick="toggleAutoSpeech()" id="btn-auto-speech">🔈 自動發音：關</button>
@@ -732,7 +754,7 @@
               <tr>
                 <th style="width: 22%;">英文單字 (發音)</th>
                 <th style="width: 35%;">繁體中文釋義 (可修改)</th>
-                <th style="width: 17%;">分類庫</th>
+                <th style="width: 17%;">原始分類</th>
                 <th style="width: 8%;">次數</th>
                 <th style="width: 8%;">正確率</th>
                 <th style="width: 10%;">操作</th>
@@ -749,15 +771,14 @@
 <div id="toast-notice"></div>
 
 <script>
-  // 認證金鑰設定（Master Key 最高權限）
   const CLOUD_MASTER_KEY = '$2a$10$QlqWn3T/df0qMYBtYokJVuNQLieKy.fOW97gM0pX/b/yC/NlVXBQe';
 
   // 五大分流 Bin ID
-  const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // 題目加強複習專用[cite: 9]
-  const BIN_DAILY     = '請填入你剛建立的_日常隨想_Bin_ID'; // 日常隨想單字專屬 Bin (請在 JSONBin 建立後貼上)
-  const BIN_GENERAL_1 = '6ace3b9bac6210605a2dcfb8'; // 高頻 Level 1[cite: 9]
-  const BIN_GENERAL_2 = '6ace3ba7ffd5d160536774a2'; // 高頻 Level 2[cite: 9]
-  const BIN_GENERAL_3 = '6ace3bb1ac6210605a2dcff8'; // 高頻 Level 3[cite: 9]
+  const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // 題目加強複習專用
+  const BIN_DAILY     = '請填入你剛建立的_日常隨想_Bin_ID'; // 日常隨想單字專用 Bin
+  const BIN_GENERAL_1 = '6ace3b9bac6210605a2dcfb8'; // 高頻 Level 1
+  const BIN_GENERAL_2 = '6ace3ba7ffd5d160536774a2'; // 高頻 Level 2
+  const BIN_GENERAL_3 = '6ace3bb1ac6210605a2dcff8'; // 高頻 Level 3
 
   const STORAGE_KEY_TEXT = 'quizlet_words_text';
   const STORAGE_KEY_STATS = 'quizlet_words_stats';
@@ -775,7 +796,7 @@
   let isAutoSpeechOn = false;
   let isSoundEnabled = true;
 
-  // 資料夾狀態：'all' | 'weak' | 'review' | 'daily' | 'g1' | 'g2' | 'g3'
+  // 資料夾狀態：'all' | 'weak' | 'mastered' | 'review' | 'daily' | 'g1' | 'g2' | 'g3'
   let currentFolder = 'all';
 
   let matchTimer = null, matchStartTime = 0, selectedTile = null, matchedPairsCount = 0;
@@ -811,7 +832,7 @@
     match: () => { playTone(784, 'sine', 0.12); setTimeout(() => playTone(1046, 'sine', 0.18), 90); }
   };
 
-  const S2T_MAP = {'万':'萬','与':'與','丑':'醜','专':'專','业':'業','东':'東','丝':'絲','两':'兩','严':'嚴','个':'個','丰':'豐','临':'臨','为':'為','丽':'麗','举':'舉','么':'麼','乐':'樂','习':'習','乡':'鄉','书':'書','买':'買','乱':'亂','争':'爭','云':'雲','亚':'亞','产':'產','亲':'親','亿':'億','从':'從','仪':'儀','们':'們','价':'價','众':'眾','优':'優','会':'會','伟':'偉','传':'傳','伤':'傷','伦':'倫','体':'體','余':'餘','佣':'傭','侠':'俠','侧':'側','侨':'僑','俭':'儉','债':'債','倾':'傾','偿':'償','储':'儲','儿':'兒','兑':'兌','党':'黨','兰':'蘭','关':'關','兴':'興','养':'養','兽':'獸','内':'內','写':'寫','军':'軍','农':'農','冰':'冰','冲':'衝','决':'決','况':'況','冻':'凍','净':'淨','凉':'涼','减':'減','几':'幾','凤':'鳳','凭':'憑','凯':'凱','击':'擊','刘':'劉','则':'則','刚':'剛','创':'創','初':'初','删':'刪','利':'利','别':'別','制':'製','刷':'刷','刺':'刺','刻':'刻','剂':'劑','剑':'劍','剥':'剝','剧':'劇','劝':'勸','办':'辦','务':'務','功':'功','动':'動','励':'勵','劲':'勁','劳':'勞','势':'勢','勋':'勳','匀':'勻','包':'包','匆':'匆','医':'醫','华':'華','协':'協','单':'單','卖':'賣','变':'變','县':'縣','复':'復','发':'發','观':'觀','见':'見','视':'視','觉':'覺','规':'規','览':'覽','计':'計','订':'訂','认':'認','让':'讓','设':'設','记':'記','访':'訪','论':'論','词':'詞','诗':'詩','试':'試','译':'譯','读':'讀','语':'語','请':'請','诸':'諸','诺':'諾','谋':'謀','谓':'謂','证':'證','识':'識','谱':'譜','贝':'貝','负':'實','贡':'貢','财':'財','责':'責','贤':'賢','败':'敗','账':'賬','货':'貨','质':'質','贪':'貪','购':'購','贮':'貯','贯':'貫','贵':'貴','贷':'貸','资':'資','贾':'賈','赋':'賦','赌':'賭','赎':'贖','赏':'賞','赐':'賜','赔':'賠','赖':'賴','赚':'賺','车':'車','轨':'軌','轩':'軒','转':'轉','轮':'輪','软':'軟','轰':'轟','轻':'輕','载':'載','较':'較','辅':'輔','辆':'輛','辈':'輩','辉':'輝','辐':'輻','辑':'輯','输':'輸','辖':'轄','辗':'輾','门':'門','闪':'閃','闭':'閉','开':'開','闰':'閏','闲':'閒','间':'間','闸':'閘','阁':'閣','闺':'閨','阅':'閱','阐':'闡','阔':'闊','队':'隊','阳':'陽','阴':'陰','阵':'陣','阶':'階','际':'際','陆':'陸','陈':'陳','险':'險','随':'隨','隐':'隱','难':'難','雾':'霧','霉':'黴','霸':'霸','靓':'靚','韦':'韋','韧':'韌','韩':'韓','韵':'韻','页':'頁','顶':'頂','顷':'頃','项':'項','顺':'順','须':'須','顽':'頑','顾':'顧','顿':'頓','颁':'頒','预':'預','领':'領','颇':'頗','颈':'頸','频':'頻','题':'題','额':'額','颜':'顏','风':'風','飘':'飄','飞':'飛','食':'食','饮':'飲','饭':'飯','饱':'飽','饲':'飼','馆':'館','馈':'饋','饿':'餓','馀':'餘','馄':'餛','鲜':'鮮','鸟':'鳥','鸡':'雞','鸣':'鳴','鸥':'鷗','鸦':'鴉','鸭':'鴨','鸿':'鴻','鸽':'鴿','鹅':'鵝','鹃':'鵑','鹄':'鵠','鹉':'鵡','鹊':'鵲','鹏':'鵬','鹰':'鷹','鹭':'鷺','麦':'麥','黄':'黃','齐':'齊','齿':'齒','龙':'龍'};
+  const S2T_MAP = {'万':'萬','与':'與','丑':'醜','专':'專','业':'業','东':'東','丝':'絲','两':'兩','严':'嚴','个':'個','丰':'豐','临':'臨','为':'為','丽':'麗','举':'舉','么':'麼','乐':'樂','习':'習','乡':'鄉','书':'書','买':'買','乱':'亂','争':'爭','云':'雲','亚':'亞','产':'產','亲':'親','亿':'億','从':'從','仪':'儀','们':'們','价':'價','众':'眾','优':'優','会':'會','伟':'偉','传':'傳','伤':'傷','伦':'倫','体':'體','余':'餘','佣':'傭','侠':'俠','侧':'側','侨':'僑','俭':'儉','债':'債','倾':'傾','偿':'償','储':'儲','儿':'兒','兑':'兌','党':'黨','兰':'蘭','关':'關','兴':'興','养':'養','兽':'獸','内':'內','写':'寫','军':'軍','农':'農','冰':'冰','冲':'衝','决':'決','况':'況','冻':'凍','净':'淨','凉':'涼','减':'減','几':'幾','凤':'鳳','凭':'憑','凯':'凱','击':'擊','刘':'劉','则':'則','刚':'剛','创':'創','初':'初','删':'刪','利':'利','别':'別','制':'製','刷':'刷','刺':'刺','刻':'刻','剂':'劑','剑':'劍','剥':'剝','剧':'劇','劝':'勸','办':'辦','务':'務','功':'功','动':'動','励':'勵','劲':'勁','劳':'勞','势':'勢','勋':'勳','匀':'勻','包':'包','匆':'匆','医':'醫','华':'華','协':'協','单':'單','卖':'賣','变':'變','县':'縣','复':'復','发':'發','观':'觀','见':'見','视':'視','觉':'覺','规':'規','览':'覽','计':'計','订':'訂','认':'認','让':'讓','设':'設','记':'記','访':'訪','论':'論','词':'詞','诗':'詩','试':'試','译':'譯','读':'讀','语':'語','请':'請','诸':'諸','诺':'諾','谋':'謀','谓':'謂','证':'證','识':'讀','谱':'譜','贝':'貝','负':'實','贡':'貢','财':'財','责':'責','贤':'賢','败':'敗','账':'賬','货':'貨','质':'質','贪':'貪','购':'購','贮':'貯','贯':'貫','贵':'貴','贷':'貸','资':'資','贾':'賈','赋':'賦','赌':'賭','赎':'贖','赏':'賞','赐':'賜','赔':'賠','赖':'賴','赚':'賺','车':'車','轨':'軌','轩':'軒','转':'轉','轮':'輪','软':'軟','轰':'轟','轻':'輕','载':'載','较':'較','辅':'輔','辆':'輛','辈':'輩','辉':'輝','辐':'輻','辑':'輯','输':'輸','辖':'轄','辗':'輾','门':'門','闪':'閃','闭':'閉','开':'開','闰':'閏','闲':'閒','间':'間','闸':'閘','阁':'閣','闺':'閨','阅':'閱','阐':'闡','阔':'闊','队':'隊','阳':'陽','阴':'陰','阵':'陣','阶':'階','际':'際','陆':'陸','陈':'陳','险':'險','随':'隨','隐':'隱','难':'難','雾':'霧','霉':'黴','霸':'霸','靓':'靚','韦':'韋','韧':'韌','韩':'韓','韵':'韻','页':'頁','顶':'頂','顷':'頃','项':'項','顺':'順','须':'須','顽':'頑','顾':'顧','顿':'頓','颁':'頒','预':'預','领':'領','颇':'頗','颈':'頸','频':'頻','题':'題','额':'額','颜':'顏','风':'風','飘':'飄','飞':'飛','食':'食','饮':'飲','饭':'飯','饱':'飽','饲':'飼','馆':'館','馈':'饋','饿':'餓','馀':'餘','馄':'餛','鲜':'鮮','鸟':'鳥','鸡':'雞','鸣':'鳴','鸥':'鷗','鸦':'鴉','鸭':'鴨','鸿':'鴻','鸽':'鴿','鹅':'鵝','鹃':'鵑','鹄':'鵠','鹉':'鵡','鹊':'鵲','鹏':'鵬','鹰':'鷹','鹭':'鷺','麦':'麥','黄':'黃','齐':'齊','齿':'齒','龙':'龍'};
 
   function toTraditionalChinese(str) {
     if (!str) return '';
@@ -853,7 +874,7 @@
       document.getElementById('sound-toggle-btn').textContent = '🔕';
     }
     const savedFolder = localStorage.getItem(STORAGE_KEY_ACTIVE_FOLDER);
-    if (savedFolder && ['all', 'weak', 'review', 'daily', 'g1', 'g2', 'g3'].includes(savedFolder)) {
+    if (savedFolder && ['all', 'weak', 'mastered', 'review', 'daily', 'g1', 'g2', 'g3'].includes(savedFolder)) {
       currentFolder = savedFolder;
     }
   }
@@ -876,17 +897,34 @@
     return (vocabStats[w].correct / vocabStats[w].total) * 100;
   }
 
-  // --- 依當前分類篩選單字（支援 weak 動態過濾） ---
+  // 判定是否達到「熟練抽離」門檻：次數 >= 10 且 正確率 >= 90%
+  function isWordMastered(w) {
+    const item = vocabStats[w];
+    if (!item || item.total < 10) return false;
+    return getWordAccuracy(w) >= 90;
+  }
+
+  // --- 依當前分類篩選單字（自動將熟練詞抽離至 mastered 分類） ---
   function getFilteredVocabList() {
     if (currentFolder === 'all') return vocabList;
+    
+    // 熟練單字區：凡是達到條件者皆匯聚在此
+    if (currentFolder === 'mastered') {
+      return vocabList.filter(w => isWordMastered(w));
+    }
+
+    // 弱項特訓區：正確率 < 30% 且尚未達到熟練
     if (currentFolder === 'weak') {
       return vocabList.filter(w => {
         const item = vocabStats[w];
         if (!item || item.total === 0) return false;
-        return getWordAccuracy(w) < 30;
+        return getWordAccuracy(w) < 30 && !isWordMastered(w);
       });
     }
+
+    // 一般資料夾：已達熟練條件的單字會被「抽離」，不在原本資料夾重複出現
     return vocabList.filter(w => {
+      if (isWordMastered(w)) return false; // 抽離至熟練區
       let f = vocabStats[w]?.folder || 'g1';
       if (f === 'general') f = 'g1';
       return f === currentFolder;
@@ -921,6 +959,7 @@
     const folderNames = { 
       all: '全部單字', 
       weak: '🔥 弱項特訓 (<30%)',
+      mastered: '🎓 熟練單字 (已掌握)',
       review: '📝 題目加強複習', 
       daily: '💡 日常隨想單字',
       g1: '📚 高頻 Level 1', 
@@ -942,21 +981,28 @@
 
   function updateFolderBadges() {
     const totalCount = vocabList.length;
-    let counts = { review: 0, daily: 0, g1: 0, g2: 0, g3: 0, weak: 0 };
+    let counts = { review: 0, daily: 0, g1: 0, g2: 0, g3: 0, weak: 0, mastered: 0 };
 
     vocabList.forEach(w => {
-      let f = vocabStats[w]?.folder || 'g1';
-      if (f === 'general') f = 'g1';
-      if (counts[f] !== undefined) counts[f]++;
-      else counts.g1++;
-
       const item = vocabStats[w];
-      if (item && item.total > 0 && getWordAccuracy(w) < 30) {
-        counts.weak++;
+      const mastered = isWordMastered(w);
+
+      if (mastered) {
+        counts.mastered++;
+      } else {
+        let f = item?.folder || 'g1';
+        if (f === 'general') f = 'g1';
+        if (counts[f] !== undefined) counts[f]++;
+        else counts.g1++;
+
+        if (item && item.total > 0 && getWordAccuracy(w) < 30) {
+          counts.weak++;
+        }
       }
     });
 
     document.getElementById('badge-count-all').textContent = totalCount;
+    document.getElementById('badge-count-mastered').textContent = counts.mastered;
     document.getElementById('badge-count-weak').textContent = counts.weak;
     document.getElementById('badge-count-review').textContent = counts.review;
     document.getElementById('badge-count-daily').textContent = counts.daily;
@@ -1467,9 +1513,8 @@
   async function addSearchedWordToVocab() {
     if (!currentSearchedWord || selectedMeanings.length === 0) return;
 
-    // 若在「全部單字」或「弱項特訓」，預設存入「日常隨想」，其餘直接歸入當前選定資料夾
     let chosenFolder = currentFolder;
-    if (chosenFolder === 'all' || chosenFolder === 'weak') {
+    if (chosenFolder === 'all' || chosenFolder === 'weak' || chosenFolder === 'mastered') {
       chosenFolder = 'daily';
     }
     const finalMeaning = selectedMeanings.join('；');
@@ -1552,7 +1597,7 @@
   async function syncVocabDatabase(importedRawText = null) {
     const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
     let targetFolder = currentFolder;
-    if (targetFolder === 'all' || targetFolder === 'weak') {
+    if (targetFolder === 'all' || targetFolder === 'weak' || targetFolder === 'mastered') {
       targetFolder = 'daily';
     }
     const parsedItems = parseLinesWithCustomMeaning(rawText);
@@ -1661,9 +1706,13 @@
     if (list.length === 0) {
       flashcardQueue = [];
       document.getElementById('fc-front-text').textContent = '此分類尚無單字';
-      document.getElementById('fc-back-text').textContent = currentFolder === 'weak' ? '目前沒有正確率低於 30% 的錯題！' : '請至題庫管理添加或更換分類';
+      let emptyHint = '請至題庫管理添加或更換分類';
+      if (currentFolder === 'weak') emptyHint = '太棒了！目前沒有正確率 < 30% 的錯題！';
+      if (currentFolder === 'mastered') emptyHint = '尚未有單字達標（需測驗10次以上且正確率≥90%）';
+      document.getElementById('fc-back-text').textContent = emptyHint;
       document.getElementById('fc-counter').textContent = '0 / 0';
       document.getElementById('fc-weak-tag').classList.add('hidden');
+      document.getElementById('fc-mastered-tag').classList.add('hidden');
       updateProgress(0);
       return;
     }
@@ -1691,9 +1740,11 @@
   function updateCardDisplay() {
     if (flashcardQueue.length === 0) return;
     const cardInner = document.getElementById('fc-inner');
+    
+    // 重設翻轉與位移狀態
+    isCardFlipped = false;
     cardInner.className = 'flashcard-inner';
     cardInner.style.transform = '';
-    isCardFlipped = false;
 
     document.getElementById('stamp-known').style.opacity = 0;
     document.getElementById('stamp-again').style.opacity = 0;
@@ -1707,11 +1758,18 @@
     
     const acc = getWordAccuracy(word);
     const weakTag = document.getElementById('fc-weak-tag');
-    if (acc < 50) {
+    const masteredTag = document.getElementById('fc-mastered-tag');
+
+    if (isWordMastered(word)) {
+      masteredTag.classList.remove('hidden');
+      weakTag.classList.add('hidden');
+    } else if (acc < 50) {
       weakTag.classList.remove('hidden');
+      masteredTag.classList.add('hidden');
       weakTag.textContent = vocabStats[word] && vocabStats[word].total > 0 ? `⚠️ 正確率 ${Math.round(acc)}%` : '⚠️ 新單字優先';
     } else {
       weakTag.classList.add('hidden');
+      masteredTag.classList.add('hidden');
     }
 
     updateProgress((currentWordIndex + 1) / flashcardQueue.length);
@@ -1719,10 +1777,14 @@
     if (isAutoSpeechOn) speakCurrentFaceWord();
   }
 
+  // --- 手機與電腦通用的翻面函式 ---
   function flipCard() {
     if (flashcardQueue.length === 0) return;
     isCardFlipped = !isCardFlipped;
-    document.getElementById('fc-inner').classList.toggle('flipped', isCardFlipped);
+    const cardInner = document.getElementById('fc-inner');
+    // 清除 inline transform，保證 CSS .flipped 的 rotateY(180deg) 絕對生效
+    cardInner.style.transform = '';
+    cardInner.classList.toggle('flipped', isCardFlipped);
   }
 
   function nextCard() {
@@ -1754,12 +1816,14 @@
     setTimeout(() => { nextCard(); }, 250);
   }
 
+  // --- 手機手勢與雙向流暢翻面修復 ---
   function initTinderGestures() {
     const card = document.getElementById('fc-inner');
     const stampKnown = document.getElementById('stamp-known');
     const stampAgain = document.getElementById('stamp-again');
 
     let startX = 0, startY = 0, currentX = 0, isDragging = false;
+    let touchStartTime = 0;
 
     card.addEventListener('touchstart', (e) => {
       if (e.target.closest('.card-speech-btn')) return;
@@ -1767,6 +1831,7 @@
       startY = e.touches[0].clientY;
       currentX = 0;
       isDragging = true;
+      touchStartTime = Date.now();
       card.classList.add('swiping');
     }, { passive: true });
 
@@ -1775,6 +1840,7 @@
       currentX = e.touches[0].clientX - startX;
       const currentY = e.touches[0].clientY - startY;
 
+      // 上下滑動為主時，不觸發水平抽卡
       if (Math.abs(currentY) > Math.abs(currentX) && Math.abs(currentX) < 20) return;
 
       const rotate = currentX * 0.08;
@@ -1793,23 +1859,33 @@
       }
     }, { passive: true });
 
-    card.addEventListener('touchend', () => {
+    card.addEventListener('touchend', (e) => {
       if (!isDragging) return;
       isDragging = false;
       card.classList.remove('swiping');
 
+      const touchDuration = Date.now() - touchStartTime;
+
+      // 1. 滑動判定：右滑掌握 / 左滑再記
       if (currentX > 90) {
         markCardMastery(true);
       } else if (currentX < -90) {
         markCardMastery(false);
       } else {
-        card.style.transform = isCardFlipped ? 'rotateY(180deg)' : '';
+        // 2. 點擊翻面判定：位移極小且觸控時間短時觸發翻面
         stampKnown.style.opacity = 0;
         stampAgain.style.opacity = 0;
-        if (Math.abs(currentX) < 10) flipCard();
+        
+        if (Math.abs(currentX) < 18 && touchDuration < 350) {
+          flipCard();
+        } else {
+          // 恢復原始面姿態
+          card.style.transform = isCardFlipped ? 'rotateY(180deg)' : '';
+        }
       }
     });
 
+    // 電腦端點擊翻面
     card.addEventListener('click', (e) => {
       if (e.target.closest('.card-speech-btn')) return;
       if (window.innerWidth > 600) flipCard();
