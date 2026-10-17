@@ -604,6 +604,7 @@
               <button class="icon-btn" title="朗讀翻譯結果" onclick="speakResultContent()">🔊</button>
               <button class="icon-btn" title="複製結果" onclick="copyTranslation()">📋</button>
             </div>
+            <!-- 下方選單已完全移除，直接依照頂端分類加入 -->
             <button id="add-to-vocab-btn" class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="addSearchedWordToVocab()" disabled>➕ 加到單字庫</button>
           </div>
         </div>
@@ -720,7 +721,7 @@
         </div>
       </div>
       <p style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 0.4rem;">
-        每行可填「<b>單字</b>」或「<b>單字, 中文釋義</b>」（支援逗號、Tab、等號、冒號分隔；有中文者不會被 Google 覆蓋）：
+        每行可填「<b>單字</b>」或「<b>單字, 中文釋義</b>」（支援半形/全形逗號、Tab、等號、冒號分隔；可直接在此修改錯字與釋義）：
       </p>
       <textarea id="raw-vocab-input" class="sync-area" placeholder="accommodate, 容納；提供住宿&#10;agenda	議程&#10;allocate = 分配；撥款&#10;comply: 遵守&#10;resilient"></textarea>
       
@@ -763,10 +764,10 @@
 
   // 五大分流 Bin ID
   const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // 題目加強複習專用
-  const BIN_DAILY     = '請填入你剛建立的_日常隨想_Bin_ID'; // 日常隨想單字專用 Bin (若未建好可先填跟 review 相同的 ID)
-  const BIN_GENERAL_1 = '6ace3b9bac6210605a2dcfb8'; // 高頻 Level 1
-  const BIN_GENERAL_2 = '6ace3ba7ffd5d160536774a2'; // 高頻 Level 2
-  const BIN_GENERAL_3 = '6ace3bb1ac6210605a2dcff8'; // 高頻 Level 3
+  const BIN_DAILY     = '請填入你剛建立的_日常隨想_Bin_ID'; // 日常隨想單字專用 Bin (若尚未建立可先填與 review 相同 ID)
+  const BIN_GENERAL_1 = '6ace3b9bac6210605a2dcfb8'; // 高頻 Level 1[cite: 9]
+  const BIN_GENERAL_2 = '6ace3ba7ffd5d160536774a2'; // 高頻 Level 2[cite: 9]
+  const BIN_GENERAL_3 = '6ace3bb1ac6210605a2dcff8'; // 高頻 Level 3[cite: 9]
 
   const STORAGE_KEY_TEXT = 'quizlet_words_text';
   const STORAGE_KEY_STATS = 'quizlet_words_stats';
@@ -885,18 +886,33 @@
     return (vocabStats[w].correct / vocabStats[w].total) * 100;
   }
 
-  // 判定是否達到熟練區標準：連續答對 3 次 (streak >= 3)
+  // --- 判定是否達到熟練區標準（相容歷史資料：連對 3 次，或歷史已達標者直接認可） ---
   function isWordMastered(w) {
     const item = vocabStats[w];
     if (!item) return false;
-    return (item.streak || 0) >= 3;
+
+    // 1. 新連對次數達標
+    if ((item.streak || 0) >= 3) {
+      item.everMastered = true;
+      return true;
+    }
+
+    // 2. 自動相容並追回歷史熟練單字（避免舊資料因沒有 streak 欄位被踢出）
+    const acc = getWordAccuracy(w);
+    if ((item.everMastered && (item.streak || 0) >= 1) || (item.total >= 4 && acc >= 80)) {
+      item.streak = Math.max(item.streak || 0, 3);
+      item.everMastered = true;
+      return true;
+    }
+
+    return false;
   }
 
   // --- 依當前分類篩選單字（自動將熟練詞抽離至 mastered 分類） ---
   function getFilteredVocabList() {
     if (currentFolder === 'all') return vocabList;
     
-    // 熟練單字區：凡是連對 3 次者匯聚在此
+    // 熟練單字區：凡是達標者匯聚在此
     if (currentFolder === 'mastered') {
       return vocabList.filter(w => isWordMastered(w));
     }
@@ -1186,8 +1202,8 @@
                 meaning: pItem.customMeaning || '', 
                 correct: 0, 
                 total: 0, 
-                streak: 0,
-                everMastered: false,
+                streak: 0, 
+                everMastered: false, 
                 folder: defFolder 
               };
             }
@@ -1229,9 +1245,11 @@
     }
   }
 
+  // --- 強健文字解析：支援中英半形與全形逗號、冒號、等號、Tab ---
   function parseLinesWithCustomMeaning(text) {
     const lines = text.split('\n');
     const result = [];
+
     lines.forEach(line => {
       let trimmed = line.trim();
       if (!trimmed) return;
@@ -1243,8 +1261,8 @@
         const parts = trimmed.split('\t');
         word = parts[0].trim();
         customMeaning = parts.slice(1).join('\t').trim();
-      } else if (trimmed.includes(',')) {
-        const parts = trimmed.split(',');
+      } else if (trimmed.includes(',') || trimmed.includes('，')) {
+        const parts = trimmed.split(/[,，]/);
         word = parts[0].trim();
         customMeaning = parts.slice(1).join(',').trim();
       } else if (trimmed.includes('=')) {
@@ -1267,6 +1285,7 @@
         });
       }
     });
+
     return result;
   }
 
@@ -1599,7 +1618,7 @@
     if (hasUpdate) await pushToCloud(false);
   }
 
-// --- 支援直接在文字框修改錯字、刪除單字的同步邏輯 ---
+  // --- 徹底支援文字框修改錯字與釋義 ---
   async function syncVocabDatabase(importedRawText = null) {
     const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
     let targetFolder = currentFolder;
@@ -1610,52 +1629,58 @@
     const parsedItems = parseLinesWithCustomMeaning(rawText);
     const newWordsInBox = parsedItems.map(item => item.word);
 
-    // 1. 如果是在特定資料夾下修改，先找出原本屬於該資料夾的所有舊單字
-    if (currentFolder !== 'all' && currentFolder !== 'weak' && currentFolder !== 'mastered') {
+    if (currentFolder === 'all') {
+      const oldWords = [...vocabList];
+      oldWords.forEach(oldW => {
+        if (!newWordsInBox.includes(oldW)) {
+          delete vocabStats[oldW];
+        }
+      });
+
+      vocabList = [];
+      parsedItems.forEach(item => {
+        const w = item.word;
+        if (!vocabList.includes(w)) vocabList.push(w);
+        if (!vocabStats[w]) {
+          vocabStats[w] = { meaning: item.customMeaning || '', correct: 0, total: 0, streak: 0, everMastered: false, folder: targetFolder };
+        } else if (item.customMeaning) {
+          vocabStats[w].meaning = item.customMeaning;
+        }
+      });
+    } else {
+      // 特定資料夾模式
       const oldWordsInCurrentFolder = vocabList.filter(w => {
         let f = vocabStats[w]?.folder || 'g1';
         if (f === 'general') f = 'g1';
         return f === currentFolder;
       });
 
-      // 找出被使用者從文字框中刪除或改掉的舊錯字，徹底移除
-      oldWordsInCurrentFolder.forEach(oldWord => {
-        if (!newWordsInBox.includes(oldWord)) {
-          vocabList = vocabList.filter(w => w !== oldWord);
-          delete vocabStats[oldWord];
+      // 移除文字框中被刪掉或被改掉的舊錯字
+      oldWordsInCurrentFolder.forEach(oldW => {
+        if (!newWordsInBox.includes(oldW)) {
+          vocabList = vocabList.filter(w => w !== oldW);
+          delete vocabStats[oldW];
+        }
+      });
+
+      // 寫入修改後的單字與釋義
+      parsedItems.forEach(item => {
+        const w = item.word;
+        if (!vocabStats[w]) {
+          vocabStats[w] = { meaning: item.customMeaning || '', correct: 0, total: 0, streak: 0, everMastered: false, folder: currentFolder };
+        } else {
+          if (item.customMeaning) {
+            vocabStats[w].meaning = item.customMeaning;
+          }
+          vocabStats[w].folder = currentFolder;
+        }
+
+        if (!vocabList.includes(w)) {
+          vocabList.unshift(w);
         }
       });
     }
 
-    // 2. 更新或寫入文字框內的最新單字與中文釋義（確保錯字修改能生效）
-    parsedItems.forEach(item => {
-      const w = item.word;
-      if (!vocabStats[w]) {
-        vocabStats[w] = { 
-          meaning: item.customMeaning || '', 
-          correct: 0, 
-          total: 0, 
-          streak: 0, 
-          everMastered: false, 
-          folder: targetFolder 
-        };
-      } else {
-        // 若使用者在文字框有寫中文，強制更新釋義
-        if (item.customMeaning) {
-          vocabStats[w].meaning = item.customMeaning;
-        }
-        // 若是在特定資料夾修改，確保歸屬資料夾正確
-        if (currentFolder !== 'all' && currentFolder !== 'weak' && currentFolder !== 'mastered') {
-          vocabStats[w].folder = currentFolder;
-        }
-      }
-
-      if (!vocabList.includes(w)) {
-        vocabList.unshift(w);
-      }
-    });
-
-    // 3. 儲存至本地並更新畫面
     localStorage.setItem(STORAGE_KEY_TEXT, serializeVocabListToText());
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
 
@@ -1667,8 +1692,9 @@
 
     await autoFillMissingTranslations();
     await pushToCloud(false);
-    showToast('✓ 單字與釋義已成功更新並同步雲端！', 'success');
+    showToast('✓ 單字與釋義已成功更新並同步！', 'success');
   }
+
   function saveEditedMeaning(word) {
     const inputElem = document.getElementById(`edit-meaning-${word}`);
     if (!inputElem) return;
@@ -1719,7 +1745,7 @@
     const total = item.total || 0;
     const acc = getWordAccuracy(w);
 
-    // 優先度 1：🚨 從熟練區退回的單字（曾進過熟練區，但答錯了）
+    // 優先度 1：🚨 從熟練區退回的單字
     if (item.everMastered && streak === 0) {
       return 1000;
     }
@@ -1734,7 +1760,7 @@
       return 300;
     }
 
-    // 優先度 4：⚠️ 頑固錯題／低正確率詞（排在後面磨練）
+    // 優先度 4：⚠️ 頑固錯題／低正確率詞
     return 100 - acc;
   }
 
@@ -1742,7 +1768,6 @@
     const list = getFilteredVocabList();
     if (list.length === 0) return [];
 
-    // 依智慧優先級由高到低排序，同優先級隨機擾動防止死記順序
     const sorted = [...list].sort((a, b) => {
       const pA = getWordLearningPriority(a) + (Math.random() * 8 - 4);
       const pB = getWordLearningPriority(b) + (Math.random() * 8 - 4);
@@ -1868,6 +1893,7 @@
     setTimeout(() => { nextCard(); }, 250);
   }
 
+  // --- 手機端雙向翻面修復 ---
   function initTinderGestures() {
     const card = document.getElementById('fc-inner');
     const stampKnown = document.getElementById('stamp-known');
@@ -1924,6 +1950,7 @@
         stampKnown.style.opacity = 0;
         stampAgain.style.opacity = 0;
         
+        // 點擊觸發雙向翻卡
         if (Math.abs(currentX) < 18 && touchDuration < 350) {
           flipCard();
         } else {
@@ -2263,12 +2290,12 @@
 
     if (isCorrect) {
       item.correct += 1;
-      item.streak += 1; // 連對加 1
+      item.streak += 1;
       if (item.streak >= 3) {
-        item.everMastered = true; // 標記為曾經掌握，正式進入熟練區
+        item.everMastered = true;
       }
     } else {
-      item.streak = 0; // 答錯歸零，自動退回原資料夾
+      item.streak = 0;
     }
 
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
