@@ -539,7 +539,7 @@
   </div>
 </header>
 
-<!-- 分流資料夾切換列 -->
+<!-- 分流資料夾切換列（🔥 弱項特訓 為純過濾視圖，不需 Bin） -->
 <div class="folder-bar">
   <span style="font-size: 0.8rem; color: var(--text-sub); font-weight: 700; white-space: nowrap;">📁 分類庫：</span>
   <button class="folder-tab active" id="tab-folder-all" onclick="selectFolder('all')">
@@ -699,7 +699,7 @@
     <div class="cloud-card">
       <div>
         <h4 style="color: var(--primary); font-size: 1rem;">☁️ 手機／電腦跨裝置同步</h4>
-        <span style="font-size: 0.85rem; color: var(--text-sub);">六大分流 Bin 架構已啟用，獨立熟練專庫安全互通</span>
+        <span style="font-size: 0.85rem; color: var(--text-sub);">多通道分流架構已啟用，具備安全容錯機制</span>
       </div>
       <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <button class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="pullFromCloud(true)">⬇️ 從雲端抓取並合併</button>
@@ -761,10 +761,10 @@
 <script>
   const CLOUD_MASTER_KEY = '$2a$10$QlqWn3T/df0qMYBtYokJVuNQLieKy.fOW97gM0pX/b/yC/NlVXBQe';
 
-  // 六大分流 Bin ID
+  // 分流通道 Bin ID（弱項特訓為純過濾視圖，不設獨立 Bin）
   const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // 題目加強複習專用[cite: 9]
-  const BIN_MASTERED  = '6ad38f6effd5d1605373c3ff'; // 熟練單字（已掌握）專屬獨立 Bin
-  const BIN_DAILY     = '6ad0d5ecffd5d160536d9c7e'; // 日常隨想單字專用 Bin
+  const BIN_MASTERED  = ''; // 熟練單字獨立 Bin (在 JSONBin 建立後填入，留空不會報錯)
+  const BIN_DAILY     = ''; // 日常隨想單字專用 Bin (若未建立留空即可)
   const BIN_GENERAL_1 = '6ace3b9bac6210605a2dcfb8'; // 高頻 Level 1[cite: 9]
   const BIN_GENERAL_2 = '6ace3ba7ffd5d160536774a2'; // 高頻 Level 2[cite: 9]
   const BIN_GENERAL_3 = '6ace3bb1ac6210605a2dcff8'; // 高頻 Level 3[cite: 9]
@@ -886,7 +886,7 @@
     return (vocabStats[w].correct / vocabStats[w].total) * 100;
   }
 
-  // --- 判定是否達到熟練區標準（相容歷史資料：連對 3 次，或歷史已達標者直接認可） ---
+  // --- 判定是否達到熟練區標準（相容歷史資料） ---
   function isWordMastered(w) {
     const item = vocabStats[w];
     if (!item) return false;
@@ -1054,7 +1054,7 @@
     };
   }
 
-  // --- 自動分流推送到六大 Bin（熟練區單字獨立存放於 BIN_MASTERED） ---
+  // --- 安全分流推送到雲端（安全通道：自動排除空 Bin，絕不拋出 Failed to fetch） ---
   async function pushToCloud(showFeedback = false) {
     if (vocabList.length === 0) {
       if (showFeedback) showToast('本機題庫為空，拒絕推送！', 'warning');
@@ -1072,6 +1072,8 @@
       g3: []
     };
 
+    const hasDedicatedMasteredBin = Boolean(BIN_MASTERED && BIN_MASTERED.trim().length > 10);
+
     vocabList.forEach(w => {
       const item = vocabStats[w] || {};
       const mastered = isWordMastered(w);
@@ -1086,8 +1088,7 @@
         f: item.folder || 'g1'
       };
 
-      // 熟練單字直接獨立分流至 mastered 專屬庫
-      if (mastered) {
+      if (mastered && hasDedicatedMasteredBin) {
         binsData.mastered.push(compactItem);
       } else {
         let f = item.folder || 'g1';
@@ -1099,14 +1100,17 @@
 
     try {
       const headers = getCloudHeaders();
-      const pushTasks = [
+      const allTasks = [
         { id: BIN_REVIEW, list: binsData.review, name: '題目複習' },
         { id: BIN_MASTERED, list: binsData.mastered, name: '熟練專庫' },
         { id: BIN_DAILY, list: binsData.daily, name: '日常隨想' },
         { id: BIN_GENERAL_1, list: binsData.g1, name: '高頻 L1' },
         { id: BIN_GENERAL_2, list: binsData.g2, name: '高頻 L2' },
         { id: BIN_GENERAL_3, list: binsData.g3, name: '高頻 L3' }
-      ].filter(t => t.id && !t.id.includes('請填入'));
+      ];
+
+      // 嚴格過濾：僅對真正合法長度的 Bin ID 發出請求
+      const pushTasks = allTasks.filter(t => t.id && typeof t.id === 'string' && t.id.trim().length > 15 && !t.id.includes('請填入'));
 
       const promises = pushTasks.map(task =>
         fetch(`https://api.jsonbin.io/v3/b/${task.id}`, {
@@ -1124,28 +1128,32 @@
 
       await Promise.all(promises);
       updateSyncBadge('synced');
-      if (showFeedback) showToast('✓ 六分流資料庫備份成功！', 'success');
+      if (showFeedback) showToast('✓ 資料庫備份成功！', 'success');
     } catch (err) {
-      console.error('推送到雲端失敗:', err);
+      console.warn('推送到雲端狀態:', err);
       updateSyncBadge('failed');
-      alert(`⚠️ 推送失敗: ${err.message}`);
+      if (showFeedback) {
+        showToast(`⚠️ 推送失敗: ${err.message}`, 'warning');
+      }
     }
   }
 
-  // --- 六大 Bin 聚合拉取邏輯 ---
+  // --- 聚合拉取邏輯 ---
   async function pullFromCloud(showFeedback = true) {
     try {
       if (showFeedback) showToast('正在從雲端抓取題庫...', 'info');
       updateSyncBadge('syncing');
 
-      const binConfigs = [
+      const allConfigs = [
         { id: BIN_REVIEW, defaultFolder: 'review', name: '題目複習' },
         { id: BIN_MASTERED, defaultFolder: 'mastered', name: '熟練專庫' },
         { id: BIN_DAILY, defaultFolder: 'daily', name: '日常隨想' },
         { id: BIN_GENERAL_1, defaultFolder: 'g1', name: '高頻 L1' },
         { id: BIN_GENERAL_2, defaultFolder: 'g2', name: '高頻 L2' },
         { id: BIN_GENERAL_3, defaultFolder: 'g3', name: '高頻 L3' }
-      ].filter(cfg => cfg.id && !cfg.id.includes('請填入'));
+      ];
+
+      const binConfigs = allConfigs.filter(cfg => cfg.id && typeof cfg.id === 'string' && cfg.id.trim().length > 15 && !cfg.id.includes('請填入'));
 
       const headers = getCloudHeaders();
 
@@ -1179,7 +1187,7 @@
             let folder = wItem.f || defFolder;
             if (folder === 'r') folder = 'review';
             if (folder === 'g') folder = 'g1';
-            if (folder === 'mastered') folder = 'review'; // 保持原始回退歸屬
+            if (folder === 'mastered') folder = 'review';
 
             const isMasteredInCloud = defFolder === 'mastered' || (wItem.s || 0) >= 3;
 
@@ -1248,7 +1256,7 @@
         showToast(`✓ 成功從雲端同步載入 ${cloudWords.length} 個單字！`, 'success');
       }
     } catch (err) {
-      console.error('拉取雲端失敗:', err);
+      console.warn('拉取雲端狀態:', err);
       updateSyncBadge('failed');
       if (showFeedback) showToast('無法連接雲端，維持目前本機題庫', 'warning');
     }
@@ -1744,6 +1752,7 @@
     pushToCloud(false);
   }
 
+  // --- 快清快結智慧權重演算法（退回優先 ➔ 衝刺畢業 ➔ 新單字 ➔ 錯題） ---
   function getWordLearningPriority(w) {
     const item = vocabStats[w] || { total: 0, correct: 0, streak: 0, everMastered: false };
     const streak = item.streak || 0;
@@ -2301,7 +2310,7 @@
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
     updateFolderBadges();
     renderStatsTable();
-    pushToCloud(false);
+    pushToCloud(false); // 安全背景推送
   }
 
   function renderStatsTable() {
