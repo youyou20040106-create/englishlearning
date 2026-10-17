@@ -413,29 +413,17 @@
     .swipe-stamp.stamp-known { left: 1.5rem; color: var(--success); border-color: var(--success); }
     .swipe-stamp.stamp-again { right: 1.5rem; color: var(--danger); border-color: var(--danger); transform: rotate(15deg); }
 
-    .weak-badge {
+    .badge-tag {
       display: inline-block;
       font-size: 0.75rem;
       font-weight: 700;
-      color: var(--danger);
-      background: rgba(217,48,37,0.12);
       padding: 0.2rem 0.5rem;
       border-radius: 12px;
-      border: 1px solid rgba(217,48,37,0.3);
       margin-left: 0.4rem;
     }
-
-    .mastered-badge {
-      display: inline-block;
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: var(--success);
-      background: rgba(30,142,62,0.12);
-      padding: 0.2rem 0.5rem;
-      border-radius: 12px;
-      border: 1px solid rgba(30,142,62,0.3);
-      margin-left: 0.4rem;
-    }
+    .weak-badge { color: var(--danger); background: rgba(217,48,37,0.12); border: 1px solid rgba(217,48,37,0.3); }
+    .mastered-badge { color: var(--success); background: rgba(30,142,62,0.12); border: 1px solid rgba(30,142,62,0.3); }
+    .rush-badge { color: var(--primary); background: rgba(26,115,232,0.12); border: 1px solid rgba(26,115,232,0.3); }
 
     .fc-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
     .round-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-main); cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
@@ -551,7 +539,7 @@
   </div>
 </header>
 
-<!-- 分流資料夾切換列（已加入 🎓 熟練單字庫） -->
+<!-- 分流資料夾切換列 -->
 <div class="folder-bar">
   <span style="font-size: 0.8rem; color: var(--text-sub); font-weight: 700; white-space: nowrap;">📁 分類庫：</span>
   <button class="folder-tab active" id="tab-folder-all" onclick="selectFolder('all')">
@@ -627,12 +615,11 @@
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <div style="display: flex; align-items: center;">
         <span id="fc-counter" style="color: var(--text-sub); font-weight: 600; font-size: 0.9rem;">0 / 0</span>
-        <span id="fc-weak-tag" class="weak-badge hidden">⚠️ 弱項優先</span>
-        <span id="fc-mastered-tag" class="mastered-badge hidden">🎓 已掌握熟詞</span>
+        <span id="fc-tag" class="badge-tag hidden"></span>
       </div>
       <div style="display: flex; gap: 0.3rem; align-items: center;">
         <button class="btn btn-secondary" style="padding: 0.4rem 0.6rem; font-size: 0.85rem;" onclick="toggleAutoSpeech()" id="btn-auto-speech">🔈 自動發音：關</button>
-        <button class="btn btn-secondary" style="padding: 0.4rem 0.6rem; font-size: 0.85rem;" onclick="shuffleFlashcards()" title="重新打亂單字順序（弱項在前）">🔀 洗牌</button>
+        <button class="btn btn-secondary" style="padding: 0.4rem 0.6rem; font-size: 0.85rem;" onclick="shuffleFlashcards()" title="依優先級打亂排序">🔀 洗牌</button>
         <button class="btn btn-secondary" style="padding: 0.4rem 0.6rem; font-size: 0.85rem;" onclick="speakCurrentFaceWord()">🔊 發音</button>
         <button class="btn btn-secondary" style="padding: 0.4rem 0.6rem; font-size: 0.85rem;" onclick="toggleCardOrientation()">🔄 翻面</button>
       </div>
@@ -671,7 +658,7 @@
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
         <div style="display: flex; align-items: center;">
           <span style="font-size: 0.85rem; color: var(--text-sub);" id="learn-prompt-label">請選出正確的英文單字：</span>
-          <span id="learn-weak-tag" class="weak-badge hidden">⚠️ 弱項優先</span>
+          <span id="learn-tag" class="badge-tag hidden"></span>
         </div>
         <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="toggleLearnDirection()" id="btn-learn-dir">🔄 反向：英選中</button>
       </div>
@@ -686,7 +673,7 @@
     <div class="write-panel">
       <div style="display: flex; justify-content: center; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem;">
         <span style="color: var(--text-sub); font-size: 0.85rem;">請拼出此繁體中文的英文單字：</span>
-        <span id="write-weak-tag" class="weak-badge hidden">⚠️ 弱項優先</span>
+        <span id="write-tag" class="badge-tag hidden"></span>
       </div>
       <div style="font-size: 1.7rem; font-weight: bold; margin-bottom: 0.8rem;" id="write-prompt">題目</div>
       <input type="text" id="write-input" class="write-input" placeholder="鍵入英文單字..." onkeydown="handleWriteEnter(event)" autocapitalize="off" autocorrect="off">
@@ -703,7 +690,7 @@
     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem;">
       <div style="font-weight: bold; color: var(--primary);">⏱️ <span id="match-timer">0.0</span>s</div>
       <div style="color: var(--text-sub);">最佳：<span id="match-best">-</span></div>
-      <button class="btn btn-secondary" style="padding: 0.35rem 0.6rem; font-size: 0.85rem;" onclick="startMatchGame()">重新開始 (弱項優先)</button>
+      <button class="btn btn-secondary" style="padding: 0.35rem 0.6rem; font-size: 0.85rem;" onclick="startMatchGame()">重新開始</button>
     </div>
     <div class="match-grid" id="match-grid"></div>
   </section>
@@ -752,12 +739,13 @@
           <table class="stat-table">
             <thead>
               <tr>
-                <th style="width: 22%;">英文單字 (發音)</th>
-                <th style="width: 35%;">繁體中文釋義 (可修改)</th>
-                <th style="width: 17%;">原始分類</th>
-                <th style="width: 8%;">次數</th>
+                <th style="width: 20%;">英文單字 (發音)</th>
+                <th style="width: 32%;">繁體中文釋義 (可修改)</th>
+                <th style="width: 16%;">原始分類</th>
+                <th style="width: 8%;">連對次數</th>
+                <th style="width: 8%;">總次數</th>
                 <th style="width: 8%;">正確率</th>
-                <th style="width: 10%;">操作</th>
+                <th style="width: 8%;">操作</th>
               </tr>
             </thead>
             <tbody id="stat-table-body"></tbody>
@@ -775,7 +763,7 @@
 
   // 五大分流 Bin ID
   const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // 題目加強複習專用
-  const BIN_DAILY     = '請填入你剛建立的_日常隨想_Bin_ID'; // 日常隨想單字專用 Bin
+  const BIN_DAILY     = '請填入你剛建立的_日常隨想_Bin_ID'; // 日常隨想單字專用 Bin (若未建好可先填跟 review 相同的 ID)
   const BIN_GENERAL_1 = '6ace3b9bac6210605a2dcfb8'; // 高頻 Level 1
   const BIN_GENERAL_2 = '6ace3ba7ffd5d160536774a2'; // 高頻 Level 2
   const BIN_GENERAL_3 = '6ace3bb1ac6210605a2dcff8'; // 高頻 Level 3
@@ -897,18 +885,18 @@
     return (vocabStats[w].correct / vocabStats[w].total) * 100;
   }
 
-  // 判定是否達到「熟練抽離」門檻：次數 >= 10 且 正確率 >= 90%
+  // 判定是否達到熟練區標準：連續答對 3 次 (streak >= 3)
   function isWordMastered(w) {
     const item = vocabStats[w];
-    if (!item || item.total < 10) return false;
-    return getWordAccuracy(w) >= 90;
+    if (!item) return false;
+    return (item.streak || 0) >= 3;
   }
 
   // --- 依當前分類篩選單字（自動將熟練詞抽離至 mastered 分類） ---
   function getFilteredVocabList() {
     if (currentFolder === 'all') return vocabList;
     
-    // 熟練單字區：凡是達到條件者皆匯聚在此
+    // 熟練單字區：凡是連對 3 次者匯聚在此
     if (currentFolder === 'mastered') {
       return vocabList.filter(w => isWordMastered(w));
     }
@@ -924,7 +912,7 @@
 
     // 一般資料夾：已達熟練條件的單字會被「抽離」，不在原本資料夾重複出現
     return vocabList.filter(w => {
-      if (isWordMastered(w)) return false; // 抽離至熟練區
+      if (isWordMastered(w)) return false;
       let f = vocabStats[w]?.folder || 'g1';
       if (f === 'general') f = 'g1';
       return f === currentFolder;
@@ -1035,8 +1023,10 @@
     }
 
     vocabList.forEach(w => {
-      if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: 'g1' };
+      if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, streak: 0, everMastered: false, folder: 'g1' };
       if (!vocabStats[w].folder || vocabStats[w].folder === 'general') vocabStats[w].folder = 'g1';
+      if (vocabStats[w].streak === undefined) vocabStats[w].streak = 0;
+      if (vocabStats[w].everMastered === undefined) vocabStats[w].everMastered = false;
     });
 
     selectFolder(currentFolder);
@@ -1076,7 +1066,15 @@
       if (f === 'general') f = 'g1';
       if (!binsData[f]) f = 'g1';
 
-      binsData[f].push({ w, m: item.meaning || '', c: item.correct || 0, t: item.total || 0, f });
+      binsData[f].push({
+        w,
+        m: item.meaning || '',
+        c: item.correct || 0,
+        t: item.total || 0,
+        s: item.streak || 0,
+        e: item.everMastered ? 1 : 0,
+        f
+      });
     });
 
     try {
@@ -1165,12 +1163,16 @@
                 meaning: wItem.m || '',
                 correct: wItem.c || 0,
                 total: wItem.t || 0,
+                streak: wItem.s || 0,
+                everMastered: !!wItem.e,
                 folder: folder
               };
             } else {
               vocabStats[w].meaning = wItem.m || vocabStats[w].meaning;
               vocabStats[w].correct = Math.max(vocabStats[w].correct, wItem.c || 0);
               vocabStats[w].total = Math.max(vocabStats[w].total, wItem.t || 0);
+              vocabStats[w].streak = Math.max(vocabStats[w].streak || 0, wItem.s || 0);
+              vocabStats[w].everMastered = vocabStats[w].everMastered || !!wItem.e;
               vocabStats[w].folder = folder || vocabStats[w].folder;
             }
           });
@@ -1184,6 +1186,8 @@
                 meaning: pItem.customMeaning || '', 
                 correct: 0, 
                 total: 0, 
+                streak: 0,
+                everMastered: false,
                 folder: defFolder 
               };
             }
@@ -1198,7 +1202,7 @@
 
       vocabList = [...new Set([...cloudWords, ...vocabList])];
       vocabList.forEach(w => {
-        if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: 'g1' };
+        if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, streak: 0, everMastered: false, folder: 'g1' };
         if (!vocabStats[w].folder) vocabStats[w].folder = 'g1';
       });
 
@@ -1545,7 +1549,7 @@
     }
 
     vocabList.unshift(currentSearchedWord);
-    vocabStats[currentSearchedWord] = { meaning: finalMeaning, correct: 0, total: 0, folder: chosenFolder };
+    vocabStats[currentSearchedWord] = { meaning: finalMeaning, correct: 0, total: 0, streak: 0, everMastered: false, folder: chosenFolder };
 
     localStorage.setItem(STORAGE_KEY_TEXT, serializeVocabListToText());
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
@@ -1572,6 +1576,8 @@
           meaning: primary || '（暫無釋義）', 
           correct: (vocabStats[w] ? vocabStats[w].correct : 0), 
           total: (vocabStats[w] ? vocabStats[w].total : 0),
+          streak: (vocabStats[w] ? vocabStats[w].streak : 0),
+          everMastered: !!(vocabStats[w] && vocabStats[w].everMastered),
           folder: (vocabStats[w]?.folder || 'g1')
         };
         hasUpdate = true;
@@ -1593,7 +1599,6 @@
     if (hasUpdate) await pushToCloud(false);
   }
 
-  // --- 同步建立索引：直接沿用頂端分類 ---
   async function syncVocabDatabase(importedRawText = null) {
     const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
     let targetFolder = currentFolder;
@@ -1608,7 +1613,7 @@
     parsedItems.forEach(item => {
       if (item.customMeaning) {
         if (!vocabStats[item.word]) {
-          vocabStats[item.word] = { meaning: item.customMeaning, correct: 0, total: 0, folder: targetFolder };
+          vocabStats[item.word] = { meaning: item.customMeaning, correct: 0, total: 0, streak: 0, everMastered: false, folder: targetFolder };
         } else {
           vocabStats[item.word].meaning = item.customMeaning;
         }
@@ -1625,7 +1630,7 @@
     vocabList = [...brandNewWords, ...oldWords, ...otherExisting];
 
     vocabList.forEach(w => {
-      if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, folder: targetFolder };
+      if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, streak: 0, everMastered: false, folder: targetFolder };
       if (!vocabStats[w].folder) vocabStats[w].folder = targetFolder;
     });
 
@@ -1648,7 +1653,7 @@
     }
 
     if (!vocabStats[word]) {
-      vocabStats[word] = { meaning: newMeaning, correct: 0, total: 0, folder: 'g1' };
+      vocabStats[word] = { meaning: newMeaning, correct: 0, total: 0, streak: 0, everMastered: false, folder: 'g1' };
     } else {
       vocabStats[word].meaning = newMeaning;
     }
@@ -1681,24 +1686,44 @@
     pushToCloud(false);
   }
 
+  // --- 快清快結智慧權重演算法（退回優先 ➔ 衝刺畢業 ➔ 新單字 ➔ 錯題） ---
+  function getWordLearningPriority(w) {
+    const item = vocabStats[w] || { total: 0, correct: 0, streak: 0, everMastered: false };
+    const streak = item.streak || 0;
+    const total = item.total || 0;
+    const acc = getWordAccuracy(w);
+
+    // 優先度 1：🚨 從熟練區退回的單字（曾進過熟練區，但答錯了）
+    if (item.everMastered && streak === 0) {
+      return 1000;
+    }
+
+    // 優先度 2：🚀 衝刺畢業詞（答對率高且快連對 3 次，盡早出清）
+    if (streak >= 1 && acc >= 60) {
+      return 500 + streak * 50 + acc;
+    }
+
+    // 優先度 3：🆕 完全沒測過的新單字（次數 = 0）
+    if (total === 0) {
+      return 300;
+    }
+
+    // 優先度 4：⚠️ 頑固錯題／低正確率詞（排在後面磨練）
+    return 100 - acc;
+  }
+
   function buildWeaknessPrioritizedQueue() {
     const list = getFilteredVocabList();
-    const weakList = [];
-    const strongList = [];
+    if (list.length === 0) return [];
 
-    list.forEach(w => {
-      const acc = getWordAccuracy(w);
-      if (acc < 50) {
-        weakList.push(w);
-      } else {
-        strongList.push(w);
-      }
+    // 依智慧優先級由高到低排序，同優先級隨機擾動防止死記順序
+    const sorted = [...list].sort((a, b) => {
+      const pA = getWordLearningPriority(a) + (Math.random() * 8 - 4);
+      const pB = getWordLearningPriority(b) + (Math.random() * 8 - 4);
+      return pB - pA;
     });
 
-    weakList.sort(() => Math.random() - 0.5);
-    strongList.sort(() => Math.random() - 0.5);
-
-    return [...weakList, ...strongList];
+    return sorted;
   }
 
   function initFlashcards(shouldShuffle = true) {
@@ -1708,11 +1733,10 @@
       document.getElementById('fc-front-text').textContent = '此分類尚無單字';
       let emptyHint = '請至題庫管理添加或更換分類';
       if (currentFolder === 'weak') emptyHint = '太棒了！目前沒有正確率 < 30% 的錯題！';
-      if (currentFolder === 'mastered') emptyHint = '尚未有單字達標（需測驗10次以上且正確率≥90%）';
+      if (currentFolder === 'mastered') emptyHint = '尚未有單字達標（連續答對 3 次即可進入熟練區）';
       document.getElementById('fc-back-text').textContent = emptyHint;
       document.getElementById('fc-counter').textContent = '0 / 0';
-      document.getElementById('fc-weak-tag').classList.add('hidden');
-      document.getElementById('fc-mastered-tag').classList.add('hidden');
+      document.getElementById('fc-tag').className = 'badge-tag hidden';
       updateProgress(0);
       return;
     }
@@ -1734,14 +1758,13 @@
     flashcardQueue = buildWeaknessPrioritizedQueue();
     currentWordIndex = 0;
     updateCardDisplay();
-    showToast('🔀 已重新洗牌（弱項優先排前）！', 'success');
+    showToast('🔀 已重新以最佳順序排程！', 'success');
   }
 
   function updateCardDisplay() {
     if (flashcardQueue.length === 0) return;
     const cardInner = document.getElementById('fc-inner');
     
-    // 重設翻轉與位移狀態
     isCardFlipped = false;
     cardInner.className = 'flashcard-inner';
     cardInner.style.transform = '';
@@ -1750,26 +1773,31 @@
     document.getElementById('stamp-again').style.opacity = 0;
 
     const word = flashcardQueue[currentWordIndex];
-    const meaning = vocabStats[word] ? vocabStats[word].meaning : '載入中...';
+    const item = vocabStats[word] || {};
+    const meaning = item.meaning || '載入中...';
 
     document.getElementById('fc-front-text').textContent = cardOrientation === 'en-first' ? word : meaning;
     document.getElementById('fc-back-text').textContent = cardOrientation === 'en-first' ? meaning : word;
     document.getElementById('fc-counter').textContent = `${currentWordIndex + 1} / ${flashcardQueue.length}`;
     
+    const tagElem = document.getElementById('fc-tag');
+    const streak = item.streak || 0;
     const acc = getWordAccuracy(word);
-    const weakTag = document.getElementById('fc-weak-tag');
-    const masteredTag = document.getElementById('fc-mastered-tag');
 
     if (isWordMastered(word)) {
-      masteredTag.classList.remove('hidden');
-      weakTag.classList.add('hidden');
-    } else if (acc < 50) {
-      weakTag.classList.remove('hidden');
-      masteredTag.classList.add('hidden');
-      weakTag.textContent = vocabStats[word] && vocabStats[word].total > 0 ? `⚠️ 正確率 ${Math.round(acc)}%` : '⚠️ 新單字優先';
+      tagElem.textContent = '🎓 熟練畢業';
+      tagElem.className = 'badge-tag mastered-badge';
+    } else if (item.everMastered && streak === 0) {
+      tagElem.textContent = '🚨 退回搶救 (急需連勝)';
+      tagElem.className = 'badge-tag weak-badge';
+    } else if (streak >= 1 && acc >= 60) {
+      tagElem.textContent = `🚀 連對 ${streak}/3 次 (衝刺畢業)`;
+      tagElem.className = 'badge-tag rush-badge';
+    } else if (item.total > 0 && acc < 40) {
+      tagElem.textContent = `⚠️ 正確率 ${Math.round(acc)}%`;
+      tagElem.className = 'badge-tag weak-badge';
     } else {
-      weakTag.classList.add('hidden');
-      masteredTag.classList.add('hidden');
+      tagElem.className = 'badge-tag hidden';
     }
 
     updateProgress((currentWordIndex + 1) / flashcardQueue.length);
@@ -1777,12 +1805,10 @@
     if (isAutoSpeechOn) speakCurrentFaceWord();
   }
 
-  // --- 手機與電腦通用的翻面函式 ---
   function flipCard() {
     if (flashcardQueue.length === 0) return;
     isCardFlipped = !isCardFlipped;
     const cardInner = document.getElementById('fc-inner');
-    // 清除 inline transform，保證 CSS .flipped 的 rotateY(180deg) 絕對生效
     cardInner.style.transform = '';
     cardInner.classList.toggle('flipped', isCardFlipped);
   }
@@ -1816,7 +1842,6 @@
     setTimeout(() => { nextCard(); }, 250);
   }
 
-  // --- 手機手勢與雙向流暢翻面修復 ---
   function initTinderGestures() {
     const card = document.getElementById('fc-inner');
     const stampKnown = document.getElementById('stamp-known');
@@ -1840,7 +1865,6 @@
       currentX = e.touches[0].clientX - startX;
       const currentY = e.touches[0].clientY - startY;
 
-      // 上下滑動為主時，不觸發水平抽卡
       if (Math.abs(currentY) > Math.abs(currentX) && Math.abs(currentX) < 20) return;
 
       const rotate = currentX * 0.08;
@@ -1859,33 +1883,29 @@
       }
     }, { passive: true });
 
-    card.addEventListener('touchend', (e) => {
+    card.addEventListener('touchend', () => {
       if (!isDragging) return;
       isDragging = false;
       card.classList.remove('swiping');
 
       const touchDuration = Date.now() - touchStartTime;
 
-      // 1. 滑動判定：右滑掌握 / 左滑再記
       if (currentX > 90) {
         markCardMastery(true);
       } else if (currentX < -90) {
         markCardMastery(false);
       } else {
-        // 2. 點擊翻面判定：位移極小且觸控時間短時觸發翻面
         stampKnown.style.opacity = 0;
         stampAgain.style.opacity = 0;
         
         if (Math.abs(currentX) < 18 && touchDuration < 350) {
           flipCard();
         } else {
-          // 恢復原始面姿態
           card.style.transform = isCardFlipped ? 'rotateY(180deg)' : '';
         }
       }
     });
 
-    // 電腦端點擊翻面
     card.addEventListener('click', (e) => {
       if (e.target.closest('.card-speech-btn')) return;
       if (window.innerWidth > 600) flipCard();
@@ -1917,20 +1937,29 @@
     document.getElementById('learn-next-btn').classList.add('hidden');
     
     const targetWord = learnQueue[currentLearnIndex];
-    const targetMeaning = vocabStats[targetWord] ? vocabStats[targetWord].meaning : '...';
+    const item = vocabStats[targetWord] || {};
+    const targetMeaning = item.meaning || '...';
 
     const questionText = learnDirection === 'zh2en' ? targetMeaning : targetWord;
     const labelText = learnDirection === 'zh2en' ? '繁體中文釋義（請選出英文單字）：' : '英文單字（請選出中文釋義）：';
     document.getElementById('learn-prompt-label').textContent = labelText;
     document.getElementById('learn-question').textContent = questionText;
 
+    const tagElem = document.getElementById('learn-tag');
+    const streak = item.streak || 0;
     const acc = getWordAccuracy(targetWord);
-    const weakTag = document.getElementById('learn-weak-tag');
-    if (acc < 50) {
-      weakTag.classList.remove('hidden');
-      weakTag.textContent = vocabStats[targetWord] && vocabStats[targetWord].total > 0 ? `⚠️ 正確率 ${Math.round(acc)}%` : '⚠️ 新單字優先';
+
+    if (item.everMastered && streak === 0) {
+      tagElem.textContent = '🚨 退回搶救 (急需連勝)';
+      tagElem.className = 'badge-tag weak-badge';
+    } else if (streak >= 1 && acc >= 60) {
+      tagElem.textContent = `🚀 連對 ${streak}/3 次 (衝刺畢業)`;
+      tagElem.className = 'badge-tag rush-badge';
+    } else if (item.total > 0 && acc < 40) {
+      tagElem.textContent = `⚠️ 正確率 ${Math.round(acc)}%`;
+      tagElem.className = 'badge-tag weak-badge';
     } else {
-      weakTag.classList.add('hidden');
+      tagElem.className = 'badge-tag hidden';
     }
 
     const currentPool = getFilteredVocabList();
@@ -2006,15 +2035,24 @@
 
   function loadWriteQuestion() {
     const targetWord = writeQueue[currentWriteIndex];
-    document.getElementById('write-prompt').textContent = vocabStats[targetWord] ? vocabStats[targetWord].meaning : '...';
+    const item = vocabStats[targetWord] || {};
+    document.getElementById('write-prompt').textContent = item.meaning || '...';
     
+    const tagElem = document.getElementById('write-tag');
+    const streak = item.streak || 0;
     const acc = getWordAccuracy(targetWord);
-    const weakTag = document.getElementById('write-weak-tag');
-    if (acc < 50) {
-      weakTag.classList.remove('hidden');
-      weakTag.textContent = vocabStats[targetWord] && vocabStats[targetWord].total > 0 ? `⚠️ 正確率 ${Math.round(acc)}%` : '⚠️ 新單字優先';
+
+    if (item.everMastered && streak === 0) {
+      tagElem.textContent = '🚨 退回搶救 (急需連勝)';
+      tagElem.className = 'badge-tag weak-badge';
+    } else if (streak >= 1 && acc >= 60) {
+      tagElem.textContent = `🚀 連對 ${streak}/3 次 (衝刺畢業)`;
+      tagElem.className = 'badge-tag rush-badge';
+    } else if (item.total > 0 && acc < 40) {
+      tagElem.textContent = `⚠️ 正確率 ${Math.round(acc)}%`;
+      tagElem.className = 'badge-tag weak-badge';
     } else {
-      weakTag.classList.add('hidden');
+      tagElem.className = 'badge-tag hidden';
     }
 
     const input = document.getElementById('write-input');
@@ -2189,15 +2227,28 @@
     }
   }
 
+  // --- 連續次數統計與畢業判定核心 ---
   function recordStat(word, isCorrect) {
-    if (vocabStats[word]) {
-      vocabStats[word].total += 1;
-      if (isCorrect) vocabStats[word].correct += 1;
-      localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
-      updateFolderBadges();
-      renderStatsTable();
-      pushToCloud(false);
+    if (!vocabStats[word]) return;
+    const item = vocabStats[word];
+    item.total += 1;
+    if (item.streak === undefined) item.streak = 0;
+    if (item.everMastered === undefined) item.everMastered = false;
+
+    if (isCorrect) {
+      item.correct += 1;
+      item.streak += 1; // 連對加 1
+      if (item.streak >= 3) {
+        item.everMastered = true; // 標記為曾經掌握，正式進入熟練區
+      }
+    } else {
+      item.streak = 0; // 答錯歸零，自動退回原資料夾
     }
+
+    localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
+    updateFolderBadges();
+    renderStatsTable();
+    pushToCloud(false);
   }
 
   function renderStatsTable() {
@@ -2206,12 +2257,12 @@
     const displayList = getFilteredVocabList();
 
     if (displayList.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-sub); padding:1rem;">此分類庫目前無單字</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-sub); padding:1rem;">此分類庫目前無單字</td></tr>';
       return;
     }
 
     displayList.forEach(w => {
-      const item = vocabStats[w] || { meaning: '...', correct: 0, total: 0, folder: 'g1' };
+      const item = vocabStats[w] || { meaning: '...', correct: 0, total: 0, streak: 0, folder: 'g1' };
       const rate = item.total === 0 ? 0 : Math.round((item.correct / item.total) * 100);
       let curFolder = item.folder || 'g1';
       if (curFolder === 'general') curFolder = 'g1';
@@ -2237,6 +2288,9 @@
             <option value="g3" ${curFolder === 'g3' ? 'selected' : ''}>📚 高頻 L3</option>
           </select>
         </td>
+        <td style="font-weight:bold; color:${(item.streak || 0) >= 3 ? 'var(--success)' : 'var(--primary)'};">
+          ${item.streak || 0}/3
+        </td>
         <td>${item.total}</td>
         <td style="color:${rate < 60 ? 'var(--danger)' : 'var(--success)'}; font-weight:bold;">
           ${item.total === 0 ? '-' : rate + '%'}
@@ -2251,12 +2305,12 @@
 
   function sortVocabByMastery() {
     vocabList.sort((a, b) => {
-      const rateA = vocabStats[a].total === 0 ? 0 : vocabStats[a].correct / vocabStats[a].total;
-      const rateB = vocabStats[b].total === 0 ? 0 : vocabStats[b].correct / vocabStats[b].total;
-      return rateA - rateB;
+      const pA = getWordLearningPriority(a);
+      const pB = getWordLearningPriority(b);
+      return pB - pA;
     });
     localStorage.setItem(STORAGE_KEY_TEXT, serializeVocabListToText());
-    showToast('✓ 英文單字已依熟練度由弱到強重新排序！', 'info');
+    showToast('✓ 英文單字已依衝刺優先級重排！', 'info');
     initFlashcards(false);
     renderStatsTable();
     refreshRawInputArea();
