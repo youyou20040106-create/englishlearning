@@ -1599,50 +1599,76 @@
     if (hasUpdate) await pushToCloud(false);
   }
 
+// --- 支援直接在文字框修改錯字、刪除單字的同步邏輯 ---
   async function syncVocabDatabase(importedRawText = null) {
     const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
     let targetFolder = currentFolder;
     if (targetFolder === 'all' || targetFolder === 'weak' || targetFolder === 'mastered') {
       targetFolder = 'daily';
     }
+
     const parsedItems = parseLinesWithCustomMeaning(rawText);
+    const newWordsInBox = parsedItems.map(item => item.word);
 
-    const brandNewWords = [];
-    const oldWords = [];
+    // 1. 如果是在特定資料夾下修改，先找出原本屬於該資料夾的所有舊單字
+    if (currentFolder !== 'all' && currentFolder !== 'weak' && currentFolder !== 'mastered') {
+      const oldWordsInCurrentFolder = vocabList.filter(w => {
+        let f = vocabStats[w]?.folder || 'g1';
+        if (f === 'general') f = 'g1';
+        return f === currentFolder;
+      });
 
+      // 找出被使用者從文字框中刪除或改掉的舊錯字，徹底移除
+      oldWordsInCurrentFolder.forEach(oldWord => {
+        if (!newWordsInBox.includes(oldWord)) {
+          vocabList = vocabList.filter(w => w !== oldWord);
+          delete vocabStats[oldWord];
+        }
+      });
+    }
+
+    // 2. 更新或寫入文字框內的最新單字與中文釋義（確保錯字修改能生效）
     parsedItems.forEach(item => {
-      if (item.customMeaning) {
-        if (!vocabStats[item.word]) {
-          vocabStats[item.word] = { meaning: item.customMeaning, correct: 0, total: 0, streak: 0, everMastered: false, folder: targetFolder };
-        } else {
-          vocabStats[item.word].meaning = item.customMeaning;
+      const w = item.word;
+      if (!vocabStats[w]) {
+        vocabStats[w] = { 
+          meaning: item.customMeaning || '', 
+          correct: 0, 
+          total: 0, 
+          streak: 0, 
+          everMastered: false, 
+          folder: targetFolder 
+        };
+      } else {
+        // 若使用者在文字框有寫中文，強制更新釋義
+        if (item.customMeaning) {
+          vocabStats[w].meaning = item.customMeaning;
+        }
+        // 若是在特定資料夾修改，確保歸屬資料夾正確
+        if (currentFolder !== 'all' && currentFolder !== 'weak' && currentFolder !== 'mastered') {
+          vocabStats[w].folder = currentFolder;
         }
       }
 
-      if (!vocabList.includes(item.word)) {
-        if (!brandNewWords.includes(item.word)) brandNewWords.push(item.word);
-      } else {
-        if (!oldWords.includes(item.word)) oldWords.push(item.word);
+      if (!vocabList.includes(w)) {
+        vocabList.unshift(w);
       }
     });
 
-    const otherExisting = vocabList.filter(w => !brandNewWords.includes(w) && !oldWords.includes(w));
-    vocabList = [...brandNewWords, ...oldWords, ...otherExisting];
-
-    vocabList.forEach(w => {
-      if (!vocabStats[w]) vocabStats[w] = { meaning: '', correct: 0, total: 0, streak: 0, everMastered: false, folder: targetFolder };
-      if (!vocabStats[w].folder) vocabStats[w].folder = targetFolder;
-    });
-
+    // 3. 儲存至本地並更新畫面
     localStorage.setItem(STORAGE_KEY_TEXT, serializeVocabListToText());
+    localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
 
     updateFolderBadges();
     refreshRawInputArea();
+    renderStatsTable();
+    initFlashcards(false);
+    refreshWriteModeData();
+
     await autoFillMissingTranslations();
     await pushToCloud(false);
-    showToast('✓ 單字庫與雲端備份已同步完成！', 'success');
+    showToast('✓ 單字與釋義已成功更新並同步雲端！', 'success');
   }
-
   function saveEditedMeaning(word) {
     const inputElem = document.getElementById(`edit-meaning-${word}`);
     if (!inputElem) return;
