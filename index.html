@@ -604,7 +604,6 @@
               <button class="icon-btn" title="朗讀翻譯結果" onclick="speakResultContent()">🔊</button>
               <button class="icon-btn" title="複製結果" onclick="copyTranslation()">📋</button>
             </div>
-            <!-- 下方選單已完全移除，直接依照頂端分類加入 -->
             <button id="add-to-vocab-btn" class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="addSearchedWordToVocab()" disabled>➕ 加到單字庫</button>
           </div>
         </div>
@@ -700,7 +699,7 @@
     <div class="cloud-card">
       <div>
         <h4 style="color: var(--primary); font-size: 1rem;">☁️ 手機／電腦跨裝置同步</h4>
-        <span style="font-size: 0.85rem; color: var(--text-sub);">五大分流 Bin 架構已啟用，總容量 500KB 跨裝置安全互通</span>
+        <span style="font-size: 0.85rem; color: var(--text-sub);">六大分流 Bin 架構已啟用，獨立熟練專庫安全互通</span>
       </div>
       <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <button class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="pullFromCloud(true)">⬇️ 從雲端抓取並合併</button>
@@ -762,9 +761,10 @@
 <script>
   const CLOUD_MASTER_KEY = '$2a$10$QlqWn3T/df0qMYBtYokJVuNQLieKy.fOW97gM0pX/b/yC/NlVXBQe';
 
-  // 五大分流 Bin ID
-  const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // 題目加強複習專用
-  const BIN_DAILY     = '請填入你剛建立的_日常隨想_Bin_ID'; // 日常隨想單字專用 Bin (若尚未建立可先填與 review 相同 ID)
+  // 六大分流 Bin ID
+  const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // 題目加強複習專用[cite: 9]
+  const BIN_MASTERED  = '6ad38f6effd5d1605373c3ff'; // 熟練單字（已掌握）專屬獨立 Bin
+  const BIN_DAILY     = '6ad0d5ecffd5d160536d9c7e'; // 日常隨想單字專用 Bin
   const BIN_GENERAL_1 = '6ace3b9bac6210605a2dcfb8'; // 高頻 Level 1[cite: 9]
   const BIN_GENERAL_2 = '6ace3ba7ffd5d160536774a2'; // 高頻 Level 2[cite: 9]
   const BIN_GENERAL_3 = '6ace3bb1ac6210605a2dcff8'; // 高頻 Level 3[cite: 9]
@@ -891,13 +891,11 @@
     const item = vocabStats[w];
     if (!item) return false;
 
-    // 1. 新連對次數達標
     if ((item.streak || 0) >= 3) {
       item.everMastered = true;
       return true;
     }
 
-    // 2. 自動相容並追回歷史熟練單字（避免舊資料因沒有 streak 欄位被踢出）
     const acc = getWordAccuracy(w);
     if ((item.everMastered && (item.streak || 0) >= 1) || (item.total >= 4 && acc >= 80)) {
       item.streak = Math.max(item.streak || 0, 3);
@@ -908,16 +906,14 @@
     return false;
   }
 
-  // --- 依當前分類篩選單字（自動將熟練詞抽離至 mastered 分類） ---
+  // --- 依當前分類篩選單字 ---
   function getFilteredVocabList() {
     if (currentFolder === 'all') return vocabList;
     
-    // 熟練單字區：凡是達標者匯聚在此
     if (currentFolder === 'mastered') {
       return vocabList.filter(w => isWordMastered(w));
     }
 
-    // 弱項特訓區：正確率 < 30% 且尚未達到熟練
     if (currentFolder === 'weak') {
       return vocabList.filter(w => {
         const item = vocabStats[w];
@@ -926,7 +922,6 @@
       });
     }
 
-    // 一般資料夾：已達熟練條件的單字會被「抽離」，不在原本資料夾重複出現
     return vocabList.filter(w => {
       if (isWordMastered(w)) return false;
       let f = vocabStats[w]?.folder || 'g1';
@@ -1059,7 +1054,7 @@
     };
   }
 
-  // --- 自動分流推送到五大 Bin ---
+  // --- 自動分流推送到六大 Bin（熟練區單字獨立存放於 BIN_MASTERED） ---
   async function pushToCloud(showFeedback = false) {
     if (vocabList.length === 0) {
       if (showFeedback) showToast('本機題庫為空，拒絕推送！', 'warning');
@@ -1070,6 +1065,7 @@
 
     const binsData = {
       review: [],
+      mastered: [],
       daily: [],
       g1: [],
       g2: [],
@@ -1078,25 +1074,34 @@
 
     vocabList.forEach(w => {
       const item = vocabStats[w] || {};
-      let f = item.folder || 'g1';
-      if (f === 'general') f = 'g1';
-      if (!binsData[f]) f = 'g1';
+      const mastered = isWordMastered(w);
 
-      binsData[f].push({
+      const compactItem = {
         w,
         m: item.meaning || '',
         c: item.correct || 0,
         t: item.total || 0,
         s: item.streak || 0,
         e: item.everMastered ? 1 : 0,
-        f
-      });
+        f: item.folder || 'g1'
+      };
+
+      // 熟練單字直接獨立分流至 mastered 專屬庫
+      if (mastered) {
+        binsData.mastered.push(compactItem);
+      } else {
+        let f = item.folder || 'g1';
+        if (f === 'general') f = 'g1';
+        if (!binsData[f]) f = 'g1';
+        binsData[f].push(compactItem);
+      }
     });
 
     try {
       const headers = getCloudHeaders();
       const pushTasks = [
         { id: BIN_REVIEW, list: binsData.review, name: '題目複習' },
+        { id: BIN_MASTERED, list: binsData.mastered, name: '熟練專庫' },
         { id: BIN_DAILY, list: binsData.daily, name: '日常隨想' },
         { id: BIN_GENERAL_1, list: binsData.g1, name: '高頻 L1' },
         { id: BIN_GENERAL_2, list: binsData.g2, name: '高頻 L2' },
@@ -1119,7 +1124,7 @@
 
       await Promise.all(promises);
       updateSyncBadge('synced');
-      if (showFeedback) showToast('✓ 資料庫備份成功！', 'success');
+      if (showFeedback) showToast('✓ 六分流資料庫備份成功！', 'success');
     } catch (err) {
       console.error('推送到雲端失敗:', err);
       updateSyncBadge('failed');
@@ -1127,7 +1132,7 @@
     }
   }
 
-  // --- 五大 Bin 聚合拉取邏輯 ---
+  // --- 六大 Bin 聚合拉取邏輯 ---
   async function pullFromCloud(showFeedback = true) {
     try {
       if (showFeedback) showToast('正在從雲端抓取題庫...', 'info');
@@ -1135,6 +1140,7 @@
 
       const binConfigs = [
         { id: BIN_REVIEW, defaultFolder: 'review', name: '題目複習' },
+        { id: BIN_MASTERED, defaultFolder: 'mastered', name: '熟練專庫' },
         { id: BIN_DAILY, defaultFolder: 'daily', name: '日常隨想' },
         { id: BIN_GENERAL_1, defaultFolder: 'g1', name: '高頻 L1' },
         { id: BIN_GENERAL_2, defaultFolder: 'g2', name: '高頻 L2' },
@@ -1173,22 +1179,25 @@
             let folder = wItem.f || defFolder;
             if (folder === 'r') folder = 'review';
             if (folder === 'g') folder = 'g1';
+            if (folder === 'mastered') folder = 'review'; // 保持原始回退歸屬
+
+            const isMasteredInCloud = defFolder === 'mastered' || (wItem.s || 0) >= 3;
 
             if (!vocabStats[w]) {
               vocabStats[w] = {
                 meaning: wItem.m || '',
                 correct: wItem.c || 0,
                 total: wItem.t || 0,
-                streak: wItem.s || 0,
-                everMastered: !!wItem.e,
+                streak: isMasteredInCloud ? Math.max(wItem.s || 0, 3) : (wItem.s || 0),
+                everMastered: isMasteredInCloud || !!wItem.e,
                 folder: folder
               };
             } else {
               vocabStats[w].meaning = wItem.m || vocabStats[w].meaning;
               vocabStats[w].correct = Math.max(vocabStats[w].correct, wItem.c || 0);
               vocabStats[w].total = Math.max(vocabStats[w].total, wItem.t || 0);
-              vocabStats[w].streak = Math.max(vocabStats[w].streak || 0, wItem.s || 0);
-              vocabStats[w].everMastered = vocabStats[w].everMastered || !!wItem.e;
+              vocabStats[w].streak = Math.max(vocabStats[w].streak || 0, isMasteredInCloud ? 3 : (wItem.s || 0));
+              vocabStats[w].everMastered = vocabStats[w].everMastered || isMasteredInCloud || !!wItem.e;
               vocabStats[w].folder = folder || vocabStats[w].folder;
             }
           });
@@ -1648,14 +1657,12 @@
         }
       });
     } else {
-      // 特定資料夾模式
       const oldWordsInCurrentFolder = vocabList.filter(w => {
         let f = vocabStats[w]?.folder || 'g1';
         if (f === 'general') f = 'g1';
         return f === currentFolder;
       });
 
-      // 移除文字框中被刪掉或被改掉的舊錯字
       oldWordsInCurrentFolder.forEach(oldW => {
         if (!newWordsInBox.includes(oldW)) {
           vocabList = vocabList.filter(w => w !== oldW);
@@ -1663,7 +1670,6 @@
         }
       });
 
-      // 寫入修改後的單字與釋義
       parsedItems.forEach(item => {
         const w = item.word;
         if (!vocabStats[w]) {
@@ -1738,29 +1744,24 @@
     pushToCloud(false);
   }
 
-  // --- 快清快結智慧權重演算法（退回優先 ➔ 衝刺畢業 ➔ 新單字 ➔ 錯題） ---
   function getWordLearningPriority(w) {
     const item = vocabStats[w] || { total: 0, correct: 0, streak: 0, everMastered: false };
     const streak = item.streak || 0;
     const total = item.total || 0;
     const acc = getWordAccuracy(w);
 
-    // 優先度 1：🚨 從熟練區退回的單字
     if (item.everMastered && streak === 0) {
       return 1000;
     }
 
-    // 優先度 2：🚀 衝刺畢業詞（答對率高且快連對 3 次，盡早出清）
     if (streak >= 1 && acc >= 60) {
       return 500 + streak * 50 + acc;
     }
 
-    // 優先度 3：🆕 完全沒測過的新單字（次數 = 0）
     if (total === 0) {
       return 300;
     }
 
-    // 優先度 4：⚠️ 頑固錯題／低正確率詞
     return 100 - acc;
   }
 
@@ -1950,7 +1951,6 @@
         stampKnown.style.opacity = 0;
         stampAgain.style.opacity = 0;
         
-        // 點擊觸發雙向翻卡
         if (Math.abs(currentX) < 18 && touchDuration < 350) {
           flipCard();
         } else {
