@@ -539,7 +539,7 @@
   </div>
 </header>
 
-<!-- 分流資料夾切換列（🔥 弱項特訓 為純過濾視圖，不設獨立 Bin） -->
+<!-- 分流資料夾切換列 -->
 <div class="folder-bar">
   <span style="font-size: 0.8rem; color: var(--text-sub); font-weight: 700; white-space: nowrap;">📁 分類庫：</span>
   <button class="folder-tab active" id="tab-folder-all" onclick="selectFolder('all')">
@@ -761,7 +761,7 @@
 <script>
   const CLOUD_MASTER_KEY = '$2a$10$QlqWn3T/df0qMYBtYokJVuNQLieKy.fOW97gM0pX/b/yC/NlVXBQe';
 
-  // 分流通道 Bin ID（弱項特訓維持為純過濾視圖，不設獨立 Bin）
+  // 分流通道 Bin ID
   const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // 題目加強複習專用[cite: 9]
   const BIN_MASTERED  = ''; // 熟練單字獨立 Bin (在 JSONBin 建立後填入，留空不報錯)
   const BIN_DAILY     = ''; // 日常隨想單字專用 Bin (若未建立留空即可)
@@ -886,7 +886,7 @@
     return (vocabStats[w].correct / vocabStats[w].total) * 100;
   }
 
-  // --- 判定是否達到熟練區標準（相容歷史資料） ---
+  // --- 判定是否達到熟練區標準（相容歷史資料：連對 3 次，或歷史已達標者直接認可） ---
   function isWordMastered(w) {
     const item = vocabStats[w];
     if (!item) return false;
@@ -908,7 +908,7 @@
 
   // --- 判定是否為真正的卡關單字 ---
   function isWordStruggling(w) {
-    if (isWordMastered(w)) return false; // 已熟練的單字不計入
+    if (isWordMastered(w)) return false;
 
     const item = vocabStats[w];
     if (!item || item.total < 2) return false; // 排除初見做錯的新字 (至少測過 2 次)
@@ -1010,7 +1010,6 @@
         if (counts[f] !== undefined) counts[f]++;
         else counts.g1++;
 
-        // 依精準卡關邏輯即時統計
         if (isWordStruggling(w)) {
           counts.weak++;
         }
@@ -1071,7 +1070,7 @@
     };
   }
 
-  // --- 自動分流推送到雲端 ---
+  // --- 自動分流推送到雲端（安全通道：自動過濾空 Bin，做題背景推送絕不中斷） ---
   async function pushToCloud(showFeedback = false) {
     if (vocabList.length === 0) {
       if (showFeedback) showToast('本機題庫為空，拒絕推送！', 'warning');
@@ -1651,7 +1650,7 @@
     if (hasUpdate) await pushToCloud(false);
   }
 
-  // --- 徹底支援文字框修改錯字與釋義 ---
+  // --- 徹底支援文字框修改錯字與釋義（保護熟練單字不被覆蓋清空） ---
   async function syncVocabDatabase(importedRawText = null) {
     const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
     let targetFolder = currentFolder;
@@ -1681,7 +1680,9 @@
         }
       });
     } else {
+      // 特定資料夾模式：嚴格保護已進入熟練區的單字不被誤殺
       const oldWordsInCurrentFolder = vocabList.filter(w => {
+        if (isWordMastered(w)) return false; // 豁免保護熟練單字
         let f = vocabStats[w]?.folder || 'g1';
         if (f === 'general') f = 'g1';
         return f === currentFolder;
@@ -1702,7 +1703,10 @@
           if (item.customMeaning) {
             vocabStats[w].meaning = item.customMeaning;
           }
-          vocabStats[w].folder = currentFolder;
+          // 保留原始熟練狀態與連對紀錄
+          if (!isWordMastered(w)) {
+            vocabStats[w].folder = currentFolder;
+          }
         }
 
         if (!vocabList.includes(w)) {
@@ -2326,7 +2330,7 @@
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
     updateFolderBadges();
     renderStatsTable();
-    pushToCloud(false);
+    pushToCloud(false); // 背景安全推送
   }
 
   function renderStatsTable() {
