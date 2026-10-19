@@ -699,7 +699,7 @@
     <div class="cloud-card">
       <div>
         <h4 style="color: var(--primary); font-size: 1rem;">☁️ 手機／電腦跨裝置同步</h4>
-        <span style="font-size: 0.85rem; color: var(--text-sub);">多通道分流架構已啟用，具備安全容錯機制</span>
+        <span style="font-size: 0.85rem; color: var(--text-sub);">六大專屬 Bin 通道全面啟動，總容量 600KB 跨裝置安全互通</span>
       </div>
       <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <button class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="pullFromCloud(true)">⬇️ 從雲端抓取並合併</button>
@@ -761,13 +761,13 @@
 <script>
   const CLOUD_MASTER_KEY = '$2a$10$QlqWn3T/df0qMYBtYokJVuNQLieKy.fOW97gM0pX/b/yC/NlVXBQe';
 
-  // 分流通道 Bin ID
-  const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // 題目加強複習專用[cite: 9]
-  const BIN_MASTERED  = ''; // 熟練單字獨立 Bin (在 JSONBin 建立後填入，留空不報錯)
-  const BIN_DAILY     = ''; // 日常隨想單字專用 Bin (若未建立留空即可)
-  const BIN_GENERAL_1 = '6ace3b9bac6210605a2dcfb8'; // 高頻 Level 1[cite: 9]
-  const BIN_GENERAL_2 = '6ace3ba7ffd5d160536774a2'; // 高頻 Level 2[cite: 9]
-  const BIN_GENERAL_3 = '6ace3bb1ac6210605a2dcff8'; // 高頻 Level 3[cite: 9]
+  // 六大專屬 Bin ID（已完全對應截圖中的 6 個真實 ID）
+  const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // review: 題目加強複習專用
+  const BIN_DAILY     = '6ad0d5ecffd5d160536d9c7e'; // daily: 日常隨想單字專用
+  const BIN_MASTERED  = '6ad38f6effd5d1605373c3ff'; // mastered: 熟練單字（已掌握）專用
+  const BIN_GENERAL_1 = '6ace3b9bac6210605a2dcfb8'; // bin1: 高頻 Level 1
+  const BIN_GENERAL_2 = '6ace3ba7ffd5d160536774a2'; // bin2: 高頻 Level 2
+  const BIN_GENERAL_3 = '6ace3bb1ac6210605a2dcff8'; // bin3: 高頻 Level 3
 
   const STORAGE_KEY_TEXT = 'quizlet_words_text';
   const STORAGE_KEY_STATS = 'quizlet_words_stats';
@@ -911,17 +911,15 @@
     if (isWordMastered(w)) return false;
 
     const item = vocabStats[w];
-    if (!item || item.total < 2) return false; // 排除初見做錯的新字 (至少測過 2 次)
+    if (!item || item.total < 2) return false;
 
     const streak = item.streak || 0;
     const total = item.total;
     const correct = item.correct;
     const wrong = total - correct;
 
-    // 近期已連對 2 次以上，代表突破瓶頸，移出卡關弱項
     if (streak >= 2) return false;
 
-    // 核心卡關標準：錯大於對，或累積做錯達 3 次以上
     return (wrong > correct) || (wrong >= 3);
   }
 
@@ -933,7 +931,6 @@
       return vocabList.filter(w => isWordMastered(w));
     }
 
-    // 弱項特訓區：純粹顯示真正卡關的單字
     if (currentFolder === 'weak') {
       return vocabList.filter(w => isWordStruggling(w));
     }
@@ -973,7 +970,7 @@
 
     const folderNames = { 
       all: '全部單字', 
-      weak: '🔥 弱項特訓 (卡關難詞)',
+      weak: '🔥 弱項特訓 (<30%)',
       mastered: '🎓 熟練單字 (已掌握)',
       review: '📝 題目加強複習', 
       daily: '💡 日常隨想單字',
@@ -1070,7 +1067,7 @@
     };
   }
 
-  // --- 自動分流推送到雲端（安全通道：自動過濾空 Bin，做題背景推送絕不中斷） ---
+  // --- 自動分流推送到雲端（安全通道：六大專屬 Bin 全獨立儲存） ---
   async function pushToCloud(showFeedback = false) {
     if (vocabList.length === 0) {
       if (showFeedback) showToast('本機題庫為空，拒絕推送！', 'warning');
@@ -1088,11 +1085,11 @@
       g3: []
     };
 
-    const hasDedicatedMasteredBin = Boolean(BIN_MASTERED && BIN_MASTERED.trim().length > 10);
-
     vocabList.forEach(w => {
       const item = vocabStats[w] || {};
       const mastered = isWordMastered(w);
+      let f = item.folder || 'g1';
+      if (f === 'general') f = 'g1';
 
       const compactItem = {
         w,
@@ -1101,14 +1098,12 @@
         t: item.total || 0,
         s: item.streak || 0,
         e: item.everMastered ? 1 : 0,
-        f: item.folder || 'g1'
+        f
       };
 
-      if (mastered && hasDedicatedMasteredBin) {
+      if (mastered) {
         binsData.mastered.push(compactItem);
       } else {
-        let f = item.folder || 'g1';
-        if (f === 'general') f = 'g1';
         if (!binsData[f]) f = 'g1';
         binsData[f].push(compactItem);
       }
@@ -1125,7 +1120,7 @@
         { id: BIN_GENERAL_3, list: binsData.g3, name: '高頻 L3' }
       ];
 
-      const pushTasks = allTasks.filter(t => t.id && typeof t.id === 'string' && t.id.trim().length > 15 && !t.id.includes('請填入'));
+      const pushTasks = allTasks.filter(t => t.id && typeof t.id === 'string' && t.id.trim().length > 15);
 
       const promises = pushTasks.map(task =>
         fetch(`https://api.jsonbin.io/v3/b/${task.id}`, {
@@ -1153,7 +1148,7 @@
     }
   }
 
-  // --- 聚合拉取邏輯 ---
+  // --- 六大 Bin 聚合拉取邏輯 ---
   async function pullFromCloud(showFeedback = true) {
     try {
       if (showFeedback) showToast('正在從雲端抓取題庫...', 'info');
@@ -1168,7 +1163,7 @@
         { id: BIN_GENERAL_3, defaultFolder: 'g3', name: '高頻 L3' }
       ];
 
-      const binConfigs = allConfigs.filter(cfg => cfg.id && typeof cfg.id === 'string' && cfg.id.trim().length > 15 && !cfg.id.includes('請填入'));
+      const binConfigs = allConfigs.filter(cfg => cfg.id && typeof cfg.id === 'string' && cfg.id.trim().length > 15);
 
       const headers = getCloudHeaders();
 
@@ -1680,7 +1675,6 @@
         }
       });
     } else {
-      // 特定資料夾模式：嚴格保護已進入熟練區的單字不被誤殺
       const oldWordsInCurrentFolder = vocabList.filter(w => {
         if (isWordMastered(w)) return false; // 豁免保護熟練單字
         let f = vocabStats[w]?.folder || 'g1';
@@ -1703,7 +1697,6 @@
           if (item.customMeaning) {
             vocabStats[w].meaning = item.customMeaning;
           }
-          // 保留原始熟練狀態與連對紀錄
           if (!isWordMastered(w)) {
             vocabStats[w].folder = currentFolder;
           }
@@ -2330,7 +2323,7 @@
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
     updateFolderBadges();
     renderStatsTable();
-    pushToCloud(false); // 背景安全推送
+    pushToCloud(false);
   }
 
   function renderStatsTable() {
