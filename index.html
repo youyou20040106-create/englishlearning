@@ -761,13 +761,13 @@
 <script>
   const CLOUD_MASTER_KEY = '$2a$10$QlqWn3T/df0qMYBtYokJVuNQLieKy.fOW97gM0pX/b/yC/NlVXBQe';
 
-  // 六大專屬 Bin ID（已完全對應截圖中的 6 個真實 ID）
-  const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // review: 題目加強複習專用
-  const BIN_DAILY     = '6ad0d5ecffd5d160536d9c7e'; // daily: 日常隨想單字專用
-  const BIN_MASTERED  = '6ad38f6effd5d1605373c3ff'; // mastered: 熟練單字（已掌握）專用
-  const BIN_GENERAL_1 = '6ace3b9bac6210605a2dcfb8'; // bin1: 高頻 Level 1
-  const BIN_GENERAL_2 = '6ace3ba7ffd5d160536774a2'; // bin2: 高頻 Level 2
-  const BIN_GENERAL_3 = '6ace3bb1ac6210605a2dcff8'; // bin3: 高頻 Level 3
+  // 六大專屬 Bin ID（對應截圖中的 6 個有效 Bin）[cite: 19]
+  const BIN_REVIEW    = '6ace3b93ffd5d16053677461'; // review: 題目加強複習專用[cite: 19]
+  const BIN_DAILY     = '6ad0d5ecffd5d160536d9c7e'; // daily: 日常隨想單字專用[cite: 19]
+  const BIN_MASTERED  = '6ad38f6effd5d1605373c3ff'; // mastered: 熟練單字（已掌握）專用[cite: 19]
+  const BIN_GENERAL_1 = '6ace3b9bac6210605a2dcfb8'; // bin1: 高頻 Level 1[cite: 19]
+  const BIN_GENERAL_2 = '6ace3ba7ffd5d160536774a2'; // bin2: 高頻 Level 2[cite: 19]
+  const BIN_GENERAL_3 = '6ace3bb1ac6210605a2dcff8'; // bin3: 高頻 Level 3[cite: 19]
 
   const STORAGE_KEY_TEXT = 'quizlet_words_text';
   const STORAGE_KEY_STATS = 'quizlet_words_stats';
@@ -798,6 +798,7 @@
   let currentSearchedWord = '';
   let selectedMeanings = [];
   let toastTimer = null;
+  let cloudPushDebounceTimer = null;
 
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   function playTone(freq, type = 'sine', duration = 0.15) {
@@ -846,7 +847,7 @@
       badge.textContent = '☁️ 雲端已連線';
       badge.className = 'sync-indicator synced';
     } else if (status === 'failed') {
-      badge.textContent = '⚠️ 同步失敗';
+      badge.textContent = '⚠️ 同步暫緩';
       badge.className = 'sync-indicator failed';
     }
   }
@@ -886,7 +887,7 @@
     return (vocabStats[w].correct / vocabStats[w].total) * 100;
   }
 
-  // --- 判定是否達到熟練區標準（相容歷史資料：連對 3 次，或歷史已達標者直接認可） ---
+  // --- 判定是否達到熟練區標準 ---
   function isWordMastered(w) {
     const item = vocabStats[w];
     if (!item) return false;
@@ -906,7 +907,7 @@
     return false;
   }
 
-  // --- 判定是否為真正的卡關單字 ---
+  // --- 判定是否為卡關單字 ---
   function isWordStruggling(w) {
     if (isWordMastered(w)) return false;
 
@@ -1032,7 +1033,7 @@
     refreshRawInputArea();
     initFlashcards(false);
     showToast(`已移動「${word}」`, 'info');
-    pushToCloud(false);
+    triggerDebouncedCloudPush();
   }
 
   window.onload = async function() {
@@ -1060,14 +1061,17 @@
     await pullFromCloud(false);
   };
 
-  function getCloudHeaders() {
-    return {
-      'Content-Type': 'application/json',
-      'X-Master-Key': CLOUD_MASTER_KEY
-    };
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // 做題與日常操作時的防抖自動推送（避免連續打爆 API）
+  function triggerDebouncedCloudPush() {
+    clearTimeout(cloudPushDebounceTimer);
+    cloudPushDebounceTimer = setTimeout(() => {
+      pushToCloud(false);
+    }, 2500);
   }
 
-  // --- 自動分流推送到雲端（安全通道：六大專屬 Bin 全獨立儲存） ---
+  // --- 循序安全推送到雲端（消除 CORS 並發限制） ---
   async function pushToCloud(showFeedback = false) {
     if (vocabList.length === 0) {
       if (showFeedback) showToast('本機題庫為空，拒絕推送！', 'warning');
@@ -1110,45 +1114,55 @@
     });
 
     try {
-      const headers = getCloudHeaders();
       const allTasks = [
         { id: BIN_REVIEW, list: binsData.review, name: '題目複習' },
-        { id: BIN_MASTERED, list: binsData.mastered, name: '熟練專庫' },
         { id: BIN_DAILY, list: binsData.daily, name: '日常隨想' },
+        { id: BIN_MASTERED, list: binsData.mastered, name: '熟練專庫' },
         { id: BIN_GENERAL_1, list: binsData.g1, name: '高頻 L1' },
         { id: BIN_GENERAL_2, list: binsData.g2, name: '高頻 L2' },
         { id: BIN_GENERAL_3, list: binsData.g3, name: '高頻 L3' }
       ];
 
-      const pushTasks = allTasks.filter(t => t.id && typeof t.id === 'string' && t.id.trim().length > 15);
+      const pushTasks = allTasks.filter(t => t.id && t.id.length > 15);
+      let successCount = 0;
 
-      const promises = pushTasks.map(task =>
-        fetch(`https://api.jsonbin.io/v3/b/${task.id}`, {
-          method: 'PUT',
-          headers: headers,
-          body: JSON.stringify({ v: 2, list: task.list, u: Date.now() })
-        }).then(async res => {
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(`${task.name} (${res.status}): ${err.message || '拒絕寫入'}`);
+      for (let i = 0; i < pushTasks.length; i++) {
+        const task = pushTasks[i];
+        try {
+          const res = await fetch(`https://api.jsonbin.io/v3/b/${task.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Master-Key': CLOUD_MASTER_KEY
+            },
+            body: JSON.stringify({ v: 2, list: task.list, u: Date.now() })
+          });
+
+          if (res.ok) {
+            successCount++;
+          } else {
+            console.warn(`推送 ${task.name} 狀態碼:`, res.status);
           }
-          return res;
-        })
-      );
+        } catch (e) {
+          console.warn(`通道 ${task.name} 連線暫緩:`, e);
+        }
+        await sleep(300); // 300ms 安全延遲，避開 API 頻率限制
+      }
 
-      await Promise.all(promises);
-      updateSyncBadge('synced');
-      if (showFeedback) showToast('✓ 資料庫備份成功！', 'success');
+      if (successCount > 0) {
+        updateSyncBadge('synced');
+        if (showFeedback) showToast('✓ 雲端資料庫同步完成！', 'success');
+      } else {
+        updateSyncBadge('failed');
+        if (showFeedback) showToast('⚠️ 網路連線微延遲，已保留於本機', 'warning');
+      }
     } catch (err) {
       console.warn('推送到雲端狀態:', err);
       updateSyncBadge('failed');
-      if (showFeedback) {
-        showToast(`⚠️ 推送失敗: ${err.message}`, 'warning');
-      }
     }
   }
 
-  // --- 六大 Bin 聚合拉取邏輯 ---
+  // --- 循序聚合拉取邏輯 ---
   async function pullFromCloud(showFeedback = true) {
     try {
       if (showFeedback) showToast('正在從雲端抓取題庫...', 'info');
@@ -1156,90 +1170,97 @@
 
       const allConfigs = [
         { id: BIN_REVIEW, defaultFolder: 'review', name: '題目複習' },
-        { id: BIN_MASTERED, defaultFolder: 'mastered', name: '熟練專庫' },
         { id: BIN_DAILY, defaultFolder: 'daily', name: '日常隨想' },
+        { id: BIN_MASTERED, defaultFolder: 'mastered', name: '熟練專庫' },
         { id: BIN_GENERAL_1, defaultFolder: 'g1', name: '高頻 L1' },
         { id: BIN_GENERAL_2, defaultFolder: 'g2', name: '高頻 L2' },
         { id: BIN_GENERAL_3, defaultFolder: 'g3', name: '高頻 L3' }
       ];
 
-      const binConfigs = allConfigs.filter(cfg => cfg.id && typeof cfg.id === 'string' && cfg.id.trim().length > 15);
-
-      const headers = getCloudHeaders();
-
-      const fetchPromises = binConfigs.map(cfg =>
-        fetch(`https://api.jsonbin.io/v3/b/${cfg.id}/latest?t=${Date.now()}`, {
-          method: 'GET',
-          headers: headers
-        })
-        .then(async res => {
-          if (!res.ok) return null;
-          return res.json();
-        })
-        .then(data => ({ data, defaultFolder: cfg.defaultFolder, name: cfg.name }))
-        .catch(() => null)
-      );
-
-      const responses = await Promise.all(fetchPromises);
+      const binConfigs = allConfigs.filter(cfg => cfg.id && cfg.id.length > 15);
       const cloudWords = [];
+      let successCount = 0;
 
-      responses.forEach(item => {
-        if (!item || !item.data || !item.data.record) return;
-        const record = item.data.record;
-        const defFolder = item.defaultFolder;
-
-        if (record.v === 2 && Array.isArray(record.list)) {
-          record.list.forEach(wItem => {
-            const w = (wItem.w || '').trim().toLowerCase();
-            if (!w) return;
-
-            cloudWords.push(w);
-            let folder = wItem.f || defFolder;
-            if (folder === 'r') folder = 'review';
-            if (folder === 'g') folder = 'g1';
-            if (folder === 'mastered') folder = 'review';
-
-            const isMasteredInCloud = defFolder === 'mastered' || (wItem.s || 0) >= 3;
-
-            if (!vocabStats[w]) {
-              vocabStats[w] = {
-                meaning: wItem.m || '',
-                correct: wItem.c || 0,
-                total: wItem.t || 0,
-                streak: isMasteredInCloud ? Math.max(wItem.s || 0, 3) : (wItem.s || 0),
-                everMastered: isMasteredInCloud || !!wItem.e,
-                folder: folder
-              };
-            } else {
-              vocabStats[w].meaning = wItem.m || vocabStats[w].meaning;
-              vocabStats[w].correct = Math.max(vocabStats[w].correct, wItem.c || 0);
-              vocabStats[w].total = Math.max(vocabStats[w].total, wItem.t || 0);
-              vocabStats[w].streak = Math.max(vocabStats[w].streak || 0, isMasteredInCloud ? 3 : (wItem.s || 0));
-              vocabStats[w].everMastered = vocabStats[w].everMastered || isMasteredInCloud || !!wItem.e;
-              vocabStats[w].folder = folder || vocabStats[w].folder;
+      for (let i = 0; i < binConfigs.length; i++) {
+        const cfg = binConfigs[i];
+        try {
+          const res = await fetch(`https://api.jsonbin.io/v3/b/${cfg.id}/latest?t=${Date.now()}`, {
+            method: 'GET',
+            headers: {
+              'X-Master-Key': CLOUD_MASTER_KEY
             }
           });
-        } else if (record.wordsText) {
-          const cloudParsed = parseLinesWithCustomMeaning(record.wordsText);
-          cloudParsed.forEach(pItem => {
-            const w = pItem.word.toLowerCase();
-            cloudWords.push(w);
-            if (!vocabStats[w]) {
-              vocabStats[w] = { 
-                meaning: pItem.customMeaning || '', 
-                correct: 0, 
-                total: 0, 
-                streak: 0, 
-                everMastered: false, 
-                folder: defFolder 
-              };
+
+          if (res.ok) {
+            successCount++;
+            const data = await res.json();
+            if (data && data.record) {
+              const record = data.record;
+              const defFolder = cfg.defaultFolder;
+
+              if (record.v === 2 && Array.isArray(record.list)) {
+                record.list.forEach(wItem => {
+                  const w = (wItem.w || '').trim().toLowerCase();
+                  if (!w) return;
+
+                  cloudWords.push(w);
+                  let folder = wItem.f || defFolder;
+                  if (folder === 'r') folder = 'review';
+                  if (folder === 'g') folder = 'g1';
+                  if (folder === 'mastered') folder = 'review';
+
+                  const isMasteredInCloud = defFolder === 'mastered' || (wItem.s || 0) >= 3;
+
+                  if (!vocabStats[w]) {
+                    vocabStats[w] = {
+                      meaning: wItem.m || '',
+                      correct: wItem.c || 0,
+                      total: wItem.t || 0,
+                      streak: isMasteredInCloud ? Math.max(wItem.s || 0, 3) : (wItem.s || 0),
+                      everMastered: isMasteredInCloud || !!wItem.e,
+                      folder: folder
+                    };
+                  } else {
+                    vocabStats[w].meaning = wItem.m || vocabStats[w].meaning;
+                    vocabStats[w].correct = Math.max(vocabStats[w].correct, wItem.c || 0);
+                    vocabStats[w].total = Math.max(vocabStats[w].total, wItem.t || 0);
+                    vocabStats[w].streak = Math.max(vocabStats[w].streak || 0, isMasteredInCloud ? 3 : (wItem.s || 0));
+                    vocabStats[w].everMastered = vocabStats[w].everMastered || isMasteredInCloud || !!wItem.e;
+                    vocabStats[w].folder = folder || vocabStats[w].folder;
+                  }
+                });
+              } else if (record.wordsText) {
+                const cloudParsed = parseLinesWithCustomMeaning(record.wordsText);
+                cloudParsed.forEach(pItem => {
+                  const w = pItem.word.toLowerCase();
+                  cloudWords.push(w);
+                  if (!vocabStats[w]) {
+                    vocabStats[w] = { 
+                      meaning: pItem.customMeaning || '', 
+                      correct: 0, 
+                      total: 0, 
+                      streak: 0, 
+                      everMastered: false, 
+                      folder: defFolder 
+                    };
+                  }
+                });
+              }
             }
-          });
+          }
+        } catch (e) {
+          console.warn(`讀取 ${cfg.name} 略過:`, e);
         }
-      });
+        await sleep(250); // 250ms 間隔
+      }
+
+      if (successCount > 0) {
+        updateSyncBadge('synced');
+      } else {
+        updateSyncBadge('failed');
+      }
 
       if (cloudWords.length === 0) {
-        updateSyncBadge('synced');
         return;
       }
 
@@ -1260,7 +1281,6 @@
       refreshWriteModeData();
 
       await autoFillMissingTranslations();
-      updateSyncBadge('synced');
 
       if (showFeedback) {
         showToast(`✓ 成功從雲端同步載入 ${cloudWords.length} 個單字！`, 'success');
@@ -1268,7 +1288,6 @@
     } catch (err) {
       console.warn('拉取雲端狀態:', err);
       updateSyncBadge('failed');
-      if (showFeedback) showToast('無法連接雲端，維持目前本機題庫', 'warning');
     }
   }
 
@@ -1559,7 +1578,6 @@
     });
   }
 
-  // --- 查單字加到當前頂端選取的資料夾 ---
   async function addSearchedWordToVocab() {
     if (!currentSearchedWord || selectedMeanings.length === 0) return;
 
@@ -1587,7 +1605,7 @@
         initFlashcards(false);
         refreshWriteModeData();
         showToast(`✓ 「${currentSearchedWord}」已更新並移至當前分類！`, 'success');
-        await pushToCloud(false);
+        triggerDebouncedCloudPush();
         return;
       }
       showToast(`「${currentSearchedWord}」已存在於單字庫中`, 'warning');
@@ -1606,7 +1624,7 @@
     initFlashcards(true);
     refreshWriteModeData();
     showToast(`✓ 已加入「${currentSearchedWord}」至當前分類！`, 'success');
-    await pushToCloud(false);
+    triggerDebouncedCloudPush();
   }
 
   async function autoFillMissingTranslations() {
@@ -1642,10 +1660,9 @@
     initFlashcards(false);
     refreshWriteModeData();
 
-    if (hasUpdate) await pushToCloud(false);
+    if (hasUpdate) triggerDebouncedCloudPush();
   }
 
-  // --- 徹底支援文字框修改錯字與釋義（保護熟練單字不被覆蓋清空） ---
   async function syncVocabDatabase(importedRawText = null) {
     const rawText = importedRawText !== null ? importedRawText : document.getElementById('raw-vocab-input').value;
     let targetFolder = currentFolder;
@@ -1676,7 +1693,7 @@
       });
     } else {
       const oldWordsInCurrentFolder = vocabList.filter(w => {
-        if (isWordMastered(w)) return false; // 豁免保護熟練單字
+        if (isWordMastered(w)) return false;
         let f = vocabStats[w]?.folder || 'g1';
         if (f === 'general') f = 'g1';
         return f === currentFolder;
@@ -1718,8 +1735,8 @@
     refreshWriteModeData();
 
     await autoFillMissingTranslations();
-    await pushToCloud(false);
-    showToast('✓ 單字與釋義已成功更新並同步！', 'success');
+    triggerDebouncedCloudPush();
+    showToast('✓ 單字與釋義已成功更新！', 'success');
   }
 
   function saveEditedMeaning(word) {
@@ -1739,13 +1756,13 @@
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
     localStorage.setItem(STORAGE_KEY_TEXT, serializeVocabListToText());
 
-    showToast(`✓ 「${word}」繁體釋義已更新並上傳雲端！`, 'success');
+    showToast(`✓ 「${word}」繁體釋義已更新！`, 'success');
     renderStatsTable();
     refreshRawInputArea();
     updateCardDisplay();
     refreshWriteModeData();
 
-    pushToCloud(false);
+    triggerDebouncedCloudPush();
   }
 
   function deleteSingleWord(word) {
@@ -1761,11 +1778,10 @@
     renderStatsTable();
     initFlashcards(true);
     refreshWriteModeData();
-    showToast(`✓ 已刪除單字「${word}」並同步雲端`, 'info');
-    pushToCloud(false);
+    showToast(`✓ 已刪除單字「${word}」`, 'info');
+    triggerDebouncedCloudPush();
   }
 
-  // --- 快清快結智慧權重演算法（退回優先 ➔ 衝刺畢業 ➔ 新單字 ➔ 錯題） ---
   function getWordLearningPriority(w) {
     const item = vocabStats[w] || { total: 0, correct: 0, streak: 0, everMastered: false };
     const streak = item.streak || 0;
@@ -2323,7 +2339,7 @@
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(vocabStats));
     updateFolderBadges();
     renderStatsTable();
-    pushToCloud(false);
+    triggerDebouncedCloudPush(); // 採用防抖背景儲存，做題順暢不卡死
   }
 
   function renderStatsTable() {
@@ -2390,7 +2406,7 @@
     renderStatsTable();
     refreshRawInputArea();
     refreshWriteModeData();
-    pushToCloud(false);
+    triggerDebouncedCloudPush();
   }
 
   function updateProgress(ratio) {
@@ -2442,7 +2458,7 @@
     reader.onload = async function(evt) {
       showToast('正在解析匯入單字與中文字詞...', 'info');
       await syncVocabDatabase(evt.target.result);
-      showToast('✓ 檔案匯入完成！新單字與自訂釋義已置頂並同步雲端！', 'success');
+      showToast('✓ 檔案匯入完成！新單字與自訂釋義已置頂！', 'success');
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -2464,7 +2480,7 @@
       localStorage.clear();
       vocabList = [];
       vocabStats = {};
-      pushToCloud(false);
+      pushToCloud(true);
       location.reload();
     }
   }
